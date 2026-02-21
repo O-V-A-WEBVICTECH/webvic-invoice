@@ -1,0 +1,2813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>InvoiceFlow - Smart Invoice Generator & Payment Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary: #764ba2;
+            --bg-light: #f7fafc;
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --text-dark: #e2e8f0;
+        }
+        
+        * { font-family: 'Inter', sans-serif; }
+        
+        /* Dark Mode */
+        .dark { background-color: var(--bg-dark); color: var(--text-dark); }
+        .dark .bg-white { background-color: var(--card-dark) !important; }
+        .dark .bg-gray-50, .dark .bg-gray-100 { background-color: var(--bg-dark) !important; }
+        .dark .text-gray-800, .dark .text-gray-700 { color: var(--text-dark) !important; }
+        .dark .text-gray-600, .dark .text-gray-500 { color: #94a3b8 !important; }
+        .dark .border { border-color: #334155 !important; }
+        .dark .shadow-sm, .dark .shadow-lg { box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important; }
+        .dark input, .dark select, .dark textarea { background-color: #334155 !important; border-color: #475569 !important; color: white !important; }
+        .dark .bg-gray-900 { background-color: #020617 !important; }
+        .dark .invoice-preview { background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important; }
+        
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .glass { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        
+        /* Animations */
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        .pulse-glow { animation: pulse-glow 2s infinite; }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); } 50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.8); } }
+        
+        .animate-slide-up { animation: slideUp 0.5s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .animate-scale-in { animation: scaleIn 0.3s ease-out; }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        
+        .animate-shake { animation: shake 0.5s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+        
+        /* Loading States */
+        .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        .dark .skeleton { background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%); background-size: 200% 100%; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; width: 20px; height: 20px; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Responsive fixes */
+        html, body { 
+            overflow-x: hidden !important; 
+            width: 100% !important; 
+            max-width: 100vw !important;
+            margin: 0;
+            padding: 0;
+        }
+        
+        #dashboard { 
+            overflow-x: hidden !important; 
+            width: 100% !important;
+            max-width: 100vw !important;
+        }
+        
+        #dashboard > div { 
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        #dashboard main { 
+            overflow-x: hidden !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box;
+        }
+        
+        /* Fix mobile viewport */
+        @media (max-width: 1024px) {
+            .section { 
+                overflow-x: hidden !important; 
+                width: 100% !important;
+            }
+            
+            #dashboard main {
+                padding: 12px !important;
+                margin-left: 0 !important;
+            }
+            
+            .grid { 
+                gap: 12px !important; 
+            }
+            
+            /* Make tables scrollable horizontally */
+            .overflow-x-auto { 
+                -webkit-overflow-scrolling: touch;
+                overflow-x: auto;
+                max-width: 100%;
+            }
+            
+            table { 
+                font-size: 11px;
+                min-width: 500px;
+            }
+            
+            /* Fix cards */
+            .bg-white, .bg-gray-50 {
+                max-width: 100% !important;
+                overflow: hidden;
+            }
+            
+            /* Fix invoice preview */
+            #invoicePreview {
+                max-width: 100%;
+                overflow: hidden;
+            }
+            
+            /* Fix forms */
+            input, select, textarea {
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+            
+            /* Fix grids */
+            .grid-cols-2 {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Fix flex items */
+            .flex-1 {
+                min-width: 0;
+            }
+        }
+        
+        @media (max-width: 640px) {
+            /* Smaller padding on mobile */
+            #dashboard main {
+                padding: 8px !important;
+            }
+            
+            /* Stack invoice form items */
+            .invoice-item {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            
+            .invoice-item input {
+                min-width: 0;
+            }
+            
+            .invoice-item .item-desc {
+                width: 100% !important;
+                flex: none !important;
+            }
+            
+            .invoice-item .item-qty,
+            .invoice-item .item-price {
+                flex: 1;
+                min-width: 70px;
+            }
+            
+            /* Hide some columns on very small screens */
+            .hide-mobile {
+                display: none !important;
+            }
+        }
+        
+        /* Password Strength Indicator */
+        .strength-bar { height: 4px; border-radius: 2px; transition: all 0.3s; }
+        .strength-weak { background: #ef4444; width: 33%; }
+        .strength-medium { background: #f59e0b; width: 66%; }
+        .strength-strong { background: #10b981; width: 100%; }
+        
+        /* Focus States */
+        input:focus, select:focus, textarea:focus { outline: none; ring: 2px; ring-offset: 2px; }
+        
+        .invoice-preview { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        
+        /* Particles */
+        .particle { position: absolute; pointer-events: none; opacity: 0.6; animation: particleFloat 15s infinite; }
+        @keyframes particleFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-100px) rotate(180deg); } }
+        
+        /* Security Badge */
+        .security-badge { background: linear-gradient(135deg, #10b981, #059669); }
+        
+        /* Tooltip - hide on mobile */
+        .tooltip { position: relative; }
+        .tooltip::after { content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        @media (min-width: 768px) { .tooltip:hover::after { opacity: 1; } }
+        
+        /* PDF Print Styles */
+        @media print {
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        
+        /* Button Loading State */
+        .btn-loading { pointer-events: none; opacity: 0.8; }
+    </style>
+</head>
+<body class="bg-gray-50 transition-colors duration-300">
+    <!-- Security Shield Overlay -->
+    <div id="securityOverlay" class="fixed inset-0 z-[100] bg-black/90 hidden items-center justify-center">
+        <div class="text-center text-white p-8">
+            <i class="fas fa-shield-alt text-6xl text-red-500 mb-4 animate-pulse"></i>
+            <h2 class="text-2xl font-bold mb-2">Security Alert</h2>
+            <p id="securityMessage" class="text-gray-300 mb-6">Suspicious activity detected</p>
+            <button onclick="dismissSecurityOverlay()" class="bg-white text-gray-900 px-6 py-3 rounded-lg font-semibold">Dismiss</button>
+        </div>
+    </div>
+
+    <!-- Dark Mode Toggle -->
+    <button id="darkModeToggle" onclick="toggleDarkMode()" class="fixed bottom-6 left-6 z-50 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-all group">
+        <i class="fas fa-moon text-gray-600 dark:hidden group-hover:text-indigo-600"></i>
+        <i class="fas fa-sun text-yellow-400 hidden dark:block"></i>
+    </button>
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed w-full z-50 transition-all duration-300 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center cursor-pointer" onclick="showSection('landing')">
+                    <div class="w-10 h-10 gradient-bg rounded-xl flex items-center justify-center mr-2 hover-lift">
+                        <i class="fas fa-file-invoice-dollar text-lg text-white"></i>
+                    </div>
+                    <span class="text-xl font-bold gradient-text">InvoiceFlow</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="#features" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition relative group text-sm">
+                        Features
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#templates" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition relative group text-sm">
+                        Templates
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#pricing" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition relative group text-sm">
+                        Pricing
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#blog" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition relative group text-sm">
+                        Blog
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#about" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition relative group text-sm">
+                        About
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
+                    </a>
+                    <a href="#contact" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition relative group text-sm">
+                        Contact
+                        <span class="absolute -bottom-1 left-0 w-0 h-0.5 bg-indigo-600 transition-all group-hover:w-full"></span>
+                    </a>
+                    <button onclick="showSection('login')" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 transition text-sm">Login</button>
+                    <button onclick="showSection('signup')" class="gradient-bg text-white px-5 py-2 rounded-full hover:opacity-90 transition shadow-lg hover:shadow-xl hover:scale-105 text-sm">Start Free</button>
+                </div>
+                <button class="md:hidden text-gray-600 dark:text-gray-300" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="fixed inset-0 z-40 bg-white dark:bg-gray-900 hidden pt-20 px-6 animate-fade-in">
+        <button onclick="toggleMobileMenu()" class="absolute top-5 right-5 text-gray-600 dark:text-gray-300">
+            <i class="fas fa-times text-2xl"></i>
+        </button>
+        <div class="flex flex-col space-y-4">
+            <a href="#features" class="text-lg py-3 border-b dark:border-gray-700 flex items-center" onclick="toggleMobileMenu()">
+                <i class="fas fa-star mr-3 text-indigo-600"></i> Features
+            </a>
+            <a href="#templates" class="text-lg py-3 border-b dark:border-gray-700 flex items-center" onclick="toggleMobileMenu()">
+                <i class="fas fa-file-alt mr-3 text-indigo-600"></i> Templates
+            </a>
+            <a href="#pricing" class="text-lg py-3 border-b dark:border-gray-700 flex items-center" onclick="toggleMobileMenu()">
+                <i class="fas fa-tag mr-3 text-indigo-600"></i> Pricing
+            </a>
+            <a href="#blog" class="text-lg py-3 border-b dark:border-gray-700 flex items-center" onclick="toggleMobileMenu()">
+                <i class="fas fa-newspaper mr-3 text-indigo-600"></i> Blog
+            </a>
+            <a href="#about" class="text-lg py-3 border-b dark:border-gray-700 flex items-center" onclick="toggleMobileMenu()">
+                <i class="fas fa-info-circle mr-3 text-indigo-600"></i> About
+            </a>
+            <a href="#contact" class="text-lg py-3 border-b dark:border-gray-700 flex items-center" onclick="toggleMobileMenu()">
+                <i class="fas fa-envelope mr-3 text-indigo-600"></i> Contact
+            </a>
+            <button onclick="showSection('login'); toggleMobileMenu()" class="text-lg py-3 border-b dark:border-gray-700 text-left flex items-center">
+                <i class="fas fa-sign-in-alt mr-3 text-indigo-600"></i> Login
+            </button>
+            <button onclick="showSection('signup'); toggleMobileMenu()" class="gradient-bg text-white py-4 rounded-full mt-4 font-semibold">
+                <i class="fas fa-rocket mr-2"></i> Start Free Trial
+            </button>
+        </div>
+    </div>
+
+    <!-- Landing Page Section -->
+    <section id="landing" class="section">
+        <!-- Hero Section with Particles -->
+        <div class="gradient-bg min-h-screen flex items-center pt-16 relative overflow-hidden">
+            <!-- Floating Particles -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                <div class="particle w-4 h-4 bg-white/20 rounded-full" style="left: 10%; top: 20%; animation-delay: 0s;"></div>
+                <div class="particle w-6 h-6 bg-white/10 rounded-full" style="left: 20%; top: 60%; animation-delay: 2s;"></div>
+                <div class="particle w-3 h-3 bg-white/30 rounded-full" style="left: 70%; top: 30%; animation-delay: 4s;"></div>
+                <div class="particle w-5 h-5 bg-white/15 rounded-full" style="left: 80%; top: 70%; animation-delay: 1s;"></div>
+                <div class="particle w-4 h-4 bg-white/20 rounded-full" style="left: 50%; top: 80%; animation-delay: 3s;"></div>
+                <div class="particle w-8 h-8 bg-white/10 rounded-full" style="left: 90%; top: 20%; animation-delay: 5s;"></div>
+            </div>
+            
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="text-white animate-slide-up">
+                        <div class="inline-flex items-center px-4 py-2 bg-white/20 rounded-full text-sm mb-6 animate-float backdrop-blur-sm">
+                            <span class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                            🚀 #1 Invoice Software for Freelancers
+                        </div>
+                        <h1 class="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
+                            Get Paid Faster with <span class="text-yellow-300">Smart Invoicing</span>
+                        </h1>
+                        <p class="text-xl text-white/80 mb-8">
+                            Create professional invoices in seconds, automate payment reminders, and track your earnings. Join 50,000+ freelancers who get paid on time.
+                        </p>
+                        
+                        <!-- Security Badge -->
+                        <div class="flex items-center space-x-4 mb-8">
+                            <div class="flex items-center bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+                                <i class="fas fa-shield-alt text-green-400 mr-2"></i>
+                                <span class="text-sm">256-bit SSL Encrypted</span>
+                            </div>
+                            <div class="flex items-center bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
+                                <i class="fas fa-lock text-green-400 mr-2"></i>
+                                <span class="text-sm">GDPR Compliant</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button onclick="showSection('signup')" class="bg-white text-indigo-600 px-8 py-4 rounded-full font-semibold hover:bg-yellow-300 transition shadow-xl text-lg hover:scale-105 flex items-center justify-center group">
+                                Start Free Trial <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition"></i>
+                            </button>
+                            <button onclick="playDemo()" class="border-2 border-white/50 text-white px-8 py-4 rounded-full font-semibold hover:bg-white/10 transition flex items-center justify-center group">
+                                <i class="fas fa-play mr-2 group-hover:scale-110 transition"></i> Watch Demo
+                            </button>
+                        </div>
+                        <div class="flex items-center mt-8 space-x-6">
+                            <div class="flex -space-x-3">
+                                <img src="https://i.pravatar.cc/40?img=1" class="w-10 h-10 rounded-full border-2 border-white hover:scale-110 transition cursor-pointer" alt="User">
+                                <img src="https://i.pravatar.cc/40?img=2" class="w-10 h-10 rounded-full border-2 border-white hover:scale-110 transition cursor-pointer" alt="User">
+                                <img src="https://i.pravatar.cc/40?img=3" class="w-10 h-10 rounded-full border-2 border-white hover:scale-110 transition cursor-pointer" alt="User">
+                                <img src="https://i.pravatar.cc/40?img=4" class="w-10 h-10 rounded-full border-2 border-white hover:scale-110 transition cursor-pointer" alt="User">
+                                <div class="w-10 h-10 rounded-full border-2 border-white bg-white/20 flex items-center justify-center text-xs font-bold">+5K</div>
+                            </div>
+                            <div class="text-sm">
+                                <div class="flex text-yellow-300 text-lg">★★★★★</div>
+                                <span class="text-white/80">4.9/5 from 2,000+ reviews</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden lg:block">
+                        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 transform rotate-2 hover:rotate-0 transition-all duration-500 animate-float hover-lift">
+                            <div class="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 dark:text-white">Invoice #INV-2024-001</h3>
+                                    <p class="text-sm text-gray-500">Due: Dec 15, 2024</p>
+                                </div>
+                                <span class="bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                                    <i class="fas fa-check-circle mr-1"></i> Paid
+                                </span>
+                            </div>
+                            <div class="border-t border-b dark:border-gray-700 py-4 my-4 space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Web Design Services</span>
+                                    <span class="font-medium dark:text-white">$2,500</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">Logo Design</span>
+                                    <span class="font-medium dark:text-white">$500</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600 dark:text-gray-400">SEO Optimization</span>
+                                    <span class="font-medium dark:text-white">$800</span>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 dark:text-gray-400">Total</span>
+                                <span class="text-2xl font-bold gradient-text">$3,800</span>
+                            </div>
+                            <button class="w-full mt-4 gradient-bg text-white py-2 rounded-lg font-medium text-sm">
+                                <i class="fas fa-download mr-2"></i> Download PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trusted By Section -->
+        <div class="bg-white dark:bg-gray-800 py-8 border-b dark:border-gray-700">
+            <div class="max-w-7xl mx-auto px-4">
+                <p class="text-center text-gray-500 mb-6 text-sm uppercase tracking-wider">Trusted by teams at</p>
+                <div class="flex flex-wrap justify-center items-center gap-8 opacity-50">
+                    <span class="text-2xl font-bold text-gray-400">Shopify</span>
+                    <span class="text-2xl font-bold text-gray-400">Stripe</span>
+                    <span class="text-2xl font-bold text-gray-400">Notion</span>
+                    <span class="text-2xl font-bold text-gray-400">Figma</span>
+                    <span class="text-2xl font-bold text-gray-400">Vercel</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="bg-white dark:bg-gray-800 py-16">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                    <div class="hover-lift p-6 rounded-2xl cursor-default">
+                        <div class="text-4xl font-bold gradient-text counter" data-target="2500000000">$0</div>
+                        <div class="text-gray-500 mt-2">Invoices Processed</div>
+                    </div>
+                    <div class="hover-lift p-6 rounded-2xl cursor-default">
+                        <div class="text-4xl font-bold gradient-text counter" data-target="50000">0</div>
+                        <div class="text-gray-500 mt-2">Active Users</div>
+                    </div>
+                    <div class="hover-lift p-6 rounded-2xl cursor-default">
+                        <div class="text-4xl font-bold gradient-text">99.9%</div>
+                        <div class="text-gray-500 mt-2">Uptime SLA</div>
+                    </div>
+                    <div class="hover-lift p-6 rounded-2xl cursor-default">
+                        <div class="text-4xl font-bold gradient-text">3x</div>
+                        <div class="text-gray-500 mt-2">Faster Payments</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div id="features" class="py-20 bg-gray-50 dark:bg-gray-900">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-16">
+                    <span class="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium mb-4">FEATURES</span>
+                    <h2 class="text-4xl font-bold mb-4 dark:text-white">Everything You Need to <span class="gradient-text">Get Paid</span></h2>
+                    <p class="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Powerful features designed for freelancers, agencies, and small businesses.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition group hover-lift animate-slide-up" style="animation-delay: 0.1s;">
+                        <div class="w-14 h-14 gradient-bg rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all">
+                            <i class="fas fa-magic text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3 dark:text-white">AI Invoice Generator</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Create professional invoices in seconds with smart templates and auto-fill features.</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition group hover-lift animate-slide-up" style="animation-delay: 0.2s;">
+                        <div class="w-14 h-14 gradient-bg rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all">
+                            <i class="fas fa-bell text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3 dark:text-white">Auto Reminders</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Automatic payment reminders sent at the right time to ensure timely payments.</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition group hover-lift animate-slide-up" style="animation-delay: 0.3s;">
+                        <div class="w-14 h-14 gradient-bg rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all">
+                            <i class="fas fa-credit-card text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3 dark:text-white">Online Payments</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Accept credit cards, PayPal, and bank transfers directly from invoices.</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition group hover-lift animate-slide-up" style="animation-delay: 0.4s;">
+                        <div class="w-14 h-14 gradient-bg rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all">
+                            <i class="fas fa-sync text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3 dark:text-white">Recurring Invoices</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Set up automatic recurring invoices for retainer clients and subscriptions.</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition group hover-lift animate-slide-up" style="animation-delay: 0.5s;">
+                        <div class="w-14 h-14 gradient-bg rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all">
+                            <i class="fas fa-chart-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3 dark:text-white">Analytics Dashboard</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Track your income, outstanding payments, and business health in real-time.</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-xl transition group hover-lift animate-slide-up" style="animation-delay: 0.6s;">
+                        <div class="w-14 h-14 gradient-bg rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all">
+                            <i class="fas fa-shield-alt text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3 dark:text-white">Bank-Level Security</h3>
+                        <p class="text-gray-600 dark:text-gray-400">256-bit encryption, 2FA, and GDPR compliance keep your data safe.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pricing Section -->
+        <div id="pricing" class="py-20 bg-white dark:bg-gray-800">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-16">
+                    <span class="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium mb-4">PRICING</span>
+                    <h2 class="text-4xl font-bold mb-4 dark:text-white">Simple, Transparent <span class="gradient-text">Pricing</span></h2>
+                    <p class="text-xl text-gray-600 dark:text-gray-400 mb-8">Start free, upgrade when you need more power.</p>
+                    <div class="inline-flex bg-gray-100 dark:bg-gray-700 p-1 rounded-full">
+                        <button id="monthlyBtn" onclick="togglePricing('monthly')" class="px-6 py-2 rounded-full gradient-bg text-white transition">Monthly</button>
+                        <button id="yearlyBtn" onclick="togglePricing('yearly')" class="px-6 py-2 rounded-full text-gray-600 dark:text-gray-300 transition">Yearly <span class="text-green-500 text-sm font-bold">-20%</span></button>
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <!-- Free Plan -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-300 transition hover-lift">
+                        <h3 class="text-xl font-bold mb-2 dark:text-white">Starter</h3>
+                        <p class="text-gray-500 mb-6">Perfect for getting started</p>
+                        <div class="mb-6">
+                            <span class="text-4xl font-bold dark:text-white">$0</span>
+                            <span class="text-gray-500">/month</span>
+                        </div>
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>5 invoices/month</li>
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>2 clients</li>
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>Basic templates</li>
+                            <li class="flex items-center text-gray-400"><i class="fas fa-times text-gray-300 mr-3"></i>Payment reminders</li>
+                            <li class="flex items-center text-gray-400"><i class="fas fa-times text-gray-300 mr-3"></i>Recurring invoices</li>
+                        </ul>
+                        <button onclick="showSection('signup')" class="w-full py-3 border-2 border-indigo-600 text-indigo-600 rounded-full font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-900 transition">Get Started</button>
+                    </div>
+                    <!-- Pro Plan -->
+                    <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl p-8 text-white transform scale-105 shadow-xl relative hover-lift">
+                        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black px-4 py-1 rounded-full text-sm font-bold flex items-center">
+                            <i class="fas fa-crown mr-1"></i> MOST POPULAR
+                        </div>
+                        <h3 class="text-xl font-bold mb-2">Professional</h3>
+                        <p class="text-white/70 mb-6">For growing freelancers</p>
+                        <div class="mb-6">
+                            <span class="text-4xl font-bold pricing-amount" data-monthly="9" data-yearly="7">$9</span>
+                            <span class="text-white/70">/month</span>
+                        </div>
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-center"><i class="fas fa-check text-yellow-300 mr-3"></i>Unlimited invoices</li>
+                            <li class="flex items-center"><i class="fas fa-check text-yellow-300 mr-3"></i>Unlimited clients</li>
+                            <li class="flex items-center"><i class="fas fa-check text-yellow-300 mr-3"></i>Premium templates</li>
+                            <li class="flex items-center"><i class="fas fa-check text-yellow-300 mr-3"></i>Auto reminders</li>
+                            <li class="flex items-center"><i class="fas fa-check text-yellow-300 mr-3"></i>Recurring invoices</li>
+                        </ul>
+                        <button onclick="showSection('signup')" class="w-full py-3 bg-white text-indigo-600 rounded-full font-semibold hover:bg-yellow-300 transition">Start Free Trial</button>
+                    </div>
+                    <!-- Business Plan -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl p-8 border-2 border-gray-200 dark:border-gray-600 hover:border-indigo-300 transition hover-lift">
+                        <h3 class="text-xl font-bold mb-2 dark:text-white">Business</h3>
+                        <p class="text-gray-500 mb-6">For teams & agencies</p>
+                        <div class="mb-6">
+                            <span class="text-4xl font-bold pricing-amount dark:text-white" data-monthly="29" data-yearly="23">$29</span>
+                            <span class="text-gray-500">/month</span>
+                        </div>
+                        <ul class="space-y-3 mb-8">
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>Everything in Pro</li>
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>5 team members</li>
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>White-label invoices</li>
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>Priority support</li>
+                            <li class="flex items-center dark:text-gray-300"><i class="fas fa-check text-green-500 mr-3"></i>API access</li>
+                        </ul>
+                        <button onclick="showSection('signup')" class="w-full py-3 border-2 border-indigo-600 text-indigo-600 rounded-full font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-900 transition">Get Started</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testimonials -->
+        <div id="testimonials" class="py-20 bg-gray-50 dark:bg-gray-900">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-16">
+                    <span class="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium mb-4">TESTIMONIALS</span>
+                    <h2 class="text-4xl font-bold mb-4 dark:text-white">Loved by <span class="gradient-text">Thousands</span></h2>
+                    <p class="text-xl text-gray-600 dark:text-gray-400">See what our customers are saying</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover-lift">
+                        <div class="flex text-yellow-400 mb-4 text-lg">★★★★★</div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6">"InvoiceFlow has transformed my freelance business. I get paid 50% faster now and the automatic reminders are a lifesaver!"</p>
+                        <div class="flex items-center">
+                            <img src="https://i.pravatar.cc/50?img=5" class="w-12 h-12 rounded-full mr-4 ring-2 ring-indigo-500" alt="Sarah Johnson">
+                            <div>
+                                <div class="font-semibold dark:text-white">Sarah Johnson</div>
+                                <div class="text-sm text-gray-500">Freelance Designer</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover-lift">
+                        <div class="flex text-yellow-400 mb-4 text-lg">★★★★★</div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6">"The recurring invoice feature is amazing. I save hours every month and never miss billing a client again."</p>
+                        <div class="flex items-center">
+                            <img src="https://i.pravatar.cc/50?img=12" class="w-12 h-12 rounded-full mr-4 ring-2 ring-indigo-500" alt="Mike Chen">
+                            <div>
+                                <div class="font-semibold dark:text-white">Mike Chen</div>
+                                <div class="text-sm text-gray-500">Web Developer</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover-lift">
+                        <div class="flex text-yellow-400 mb-4 text-lg">★★★★★</div>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6">"Best investment for my agency. The white-label feature makes us look super professional to our clients."</p>
+                        <div class="flex items-center">
+                            <img src="https://i.pravatar.cc/50?img=20" class="w-12 h-12 rounded-full mr-4 ring-2 ring-indigo-500" alt="Emily Davis">
+                            <div>
+                                <div class="font-semibold dark:text-white">Emily Davis</div>
+                                <div class="text-sm text-gray-500">Agency Owner</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Templates Section -->
+        <div id="templates" class="py-20 bg-white dark:bg-gray-800">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-16">
+                    <span class="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium mb-4">TEMPLATES</span>
+                    <h2 class="text-4xl font-bold mb-4 dark:text-white">Professional Invoice <span class="gradient-text">Templates</span></h2>
+                    <p class="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Choose from stunning templates designed to impress your clients and get paid faster.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Template 1 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 hover-lift group cursor-pointer border-2 border-transparent hover:border-indigo-500 transition-all">
+                        <div class="aspect-[3/4] bg-white dark:bg-gray-800 rounded-xl mb-4 overflow-hidden shadow-lg relative">
+                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-10 transition"></div>
+                            <div class="p-4">
+                                <div class="h-4 w-20 bg-indigo-600 rounded mb-2"></div>
+                                <div class="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded mb-6"></div>
+                                <div class="flex justify-between mb-4">
+                                    <div class="h-2 w-12 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                                    <div class="h-2 w-12 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                                </div>
+                                <div class="space-y-2 mb-4">
+                                    <div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                    <div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                    <div class="h-2 w-3/4 bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                </div>
+                                <div class="h-8 w-full bg-indigo-100 dark:bg-indigo-900 rounded mt-6"></div>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-lg dark:text-white mb-1">Modern Minimal</h3>
+                        <p class="text-gray-500 text-sm">Clean and professional design</p>
+                        <span class="inline-block mt-2 text-green-500 text-sm font-medium"><i class="fas fa-check-circle mr-1"></i> Free</span>
+                    </div>
+                    <!-- Template 2 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 hover-lift group cursor-pointer border-2 border-indigo-500 transition-all relative">
+                        <div class="absolute -top-3 right-4 bg-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold">POPULAR</div>
+                        <div class="aspect-[3/4] bg-white dark:bg-gray-800 rounded-xl mb-4 overflow-hidden shadow-lg relative">
+                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-10 transition"></div>
+                            <div class="p-4">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="h-6 w-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded"></div>
+                                    <div class="h-3 w-16 bg-green-500 rounded-full"></div>
+                                </div>
+                                <div class="h-3 w-24 bg-indigo-600 rounded mb-1"></div>
+                                <div class="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded mb-4"></div>
+                                <div class="grid grid-cols-2 gap-2 mb-4">
+                                    <div class="h-12 bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                    <div class="h-12 bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                </div>
+                                <div class="space-y-1">
+                                    <div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                    <div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                </div>
+                                <div class="h-10 w-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded mt-4"></div>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-lg dark:text-white mb-1">Corporate Pro</h3>
+                        <p class="text-gray-500 text-sm">Perfect for agencies & teams</p>
+                        <span class="inline-block mt-2 text-indigo-500 text-sm font-medium"><i class="fas fa-crown mr-1"></i> Pro</span>
+                    </div>
+                    <!-- Template 3 -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 hover-lift group cursor-pointer border-2 border-transparent hover:border-indigo-500 transition-all">
+                        <div class="aspect-[3/4] bg-white dark:bg-gray-800 rounded-xl mb-4 overflow-hidden shadow-lg relative">
+                            <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-10 transition"></div>
+                            <div class="p-4">
+                                <div class="h-12 w-full bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg mb-4 flex items-center justify-center">
+                                    <div class="h-3 w-20 bg-white/50 rounded"></div>
+                                </div>
+                                <div class="flex justify-between mb-3">
+                                    <div class="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                                    <div class="h-2 w-16 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                                </div>
+                                <div class="space-y-2 mb-4">
+                                    <div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                    <div class="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded"></div>
+                                </div>
+                                <div class="h-8 w-full bg-emerald-100 dark:bg-emerald-900 rounded"></div>
+                            </div>
+                        </div>
+                        <h3 class="font-bold text-lg dark:text-white mb-1">Creative Bold</h3>
+                        <p class="text-gray-500 text-sm">Stand out with color</p>
+                        <span class="inline-block mt-2 text-indigo-500 text-sm font-medium"><i class="fas fa-crown mr-1"></i> Pro</span>
+                    </div>
+                </div>
+                <div class="text-center mt-12">
+                    <button onclick="showSection('signup')" class="gradient-bg text-white px-8 py-4 rounded-full font-semibold hover:opacity-90 transition shadow-xl hover:scale-105">
+                        <i class="fas fa-palette mr-2"></i> View All 20+ Templates
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Section -->
+        <div id="about" class="py-20 bg-gray-50 dark:bg-gray-900">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="grid lg:grid-cols-2 gap-16 items-center">
+                    <div class="animate-slide-up">
+                        <span class="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium mb-4">ABOUT US</span>
+                        <h2 class="text-4xl font-bold mb-6 dark:text-white">Built by Freelancers, <span class="gradient-text">For Freelancers</span></h2>
+                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-6">
+                            We started InvoiceFlow in 2020 after experiencing the frustration of chasing payments and managing invoices manually. As freelancers ourselves, we knew there had to be a better way.
+                        </p>
+                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                            Today, we're proud to help over 50,000 freelancers and small businesses get paid faster, spend less time on admin, and focus on what they do best.
+                        </p>
+                        <div class="grid grid-cols-3 gap-6 mb-8">
+                            <div class="text-center">
+                                <div class="text-3xl font-bold gradient-text">50K+</div>
+                                <div class="text-gray-500 text-sm">Happy Users</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold gradient-text">$2.5B</div>
+                                <div class="text-gray-500 text-sm">Invoiced</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold gradient-text">120+</div>
+                                <div class="text-gray-500 text-sm">Countries</div>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-4">
+                            <div class="flex items-center bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
+                                <i class="fas fa-medal text-yellow-500 mr-2"></i>
+                                <span class="text-sm dark:text-gray-300">Best Invoice App 2024</span>
+                            </div>
+                            <div class="flex items-center bg-white dark:bg-gray-800 px-4 py-2 rounded-full shadow-sm">
+                                <i class="fas fa-award text-indigo-500 mr-2"></i>
+                                <span class="text-sm dark:text-gray-300">Product Hunt #1</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
+                            <h3 class="text-2xl font-bold mb-6">Our Mission</h3>
+                            <p class="text-white/90 text-lg mb-6">
+                                "To empower every freelancer and small business owner with the tools they need to manage their finances effortlessly and get paid what they deserve, on time."
+                            </p>
+                            <div class="flex items-center">
+                                <img src="https://i.pravatar.cc/60?img=33" class="w-14 h-14 rounded-full border-2 border-white mr-4" alt="CEO">
+                                <div>
+                                    <div class="font-semibold">Alex Thompson</div>
+                                    <div class="text-white/70 text-sm">Founder & CEO</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute -bottom-6 -right-6 w-24 h-24 bg-yellow-400 rounded-2xl flex items-center justify-center animate-float">
+                            <i class="fas fa-heart text-3xl text-white"></i>
+                        </div>
+                    </div>
+                </div>
+                <!-- Team -->
+                <div class="mt-20">
+                    <h3 class="text-2xl font-bold text-center mb-12 dark:text-white">Meet Our Team</h3>
+                    <div class="grid md:grid-cols-4 gap-8">
+                        <div class="text-center hover-lift">
+                            <img src="https://i.pravatar.cc/150?img=33" class="w-24 h-24 rounded-full mx-auto mb-4 ring-4 ring-indigo-100 dark:ring-indigo-900" alt="Team">
+                            <h4 class="font-semibold dark:text-white">Alex Thompson</h4>
+                            <p class="text-gray-500 text-sm">Founder & CEO</p>
+                        </div>
+                        <div class="text-center hover-lift">
+                            <img src="https://i.pravatar.cc/150?img=47" class="w-24 h-24 rounded-full mx-auto mb-4 ring-4 ring-indigo-100 dark:ring-indigo-900" alt="Team">
+                            <h4 class="font-semibold dark:text-white">Sarah Chen</h4>
+                            <p class="text-gray-500 text-sm">CTO</p>
+                        </div>
+                        <div class="text-center hover-lift">
+                            <img src="https://i.pravatar.cc/150?img=52" class="w-24 h-24 rounded-full mx-auto mb-4 ring-4 ring-indigo-100 dark:ring-indigo-900" alt="Team">
+                            <h4 class="font-semibold dark:text-white">Michael Roberts</h4>
+                            <p class="text-gray-500 text-sm">Head of Design</p>
+                        </div>
+                        <div class="text-center hover-lift">
+                            <img src="https://i.pravatar.cc/150?img=44" class="w-24 h-24 rounded-full mx-auto mb-4 ring-4 ring-indigo-100 dark:ring-indigo-900" alt="Team">
+                            <h4 class="font-semibold dark:text-white">Emily Davis</h4>
+                            <p class="text-gray-500 text-sm">Customer Success</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blog Section -->
+        <div id="blog" class="py-20 bg-white dark:bg-gray-800">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-16">
+                    <span class="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium mb-4">BLOG</span>
+                    <h2 class="text-4xl font-bold mb-4 dark:text-white">Latest from Our <span class="gradient-text">Blog</span></h2>
+                    <p class="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Tips, tricks, and insights to help you manage your freelance business better.</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Blog Post 1 -->
+                    <article class="bg-gray-50 dark:bg-gray-700 rounded-2xl overflow-hidden hover-lift group">
+                        <div class="h-48 bg-gradient-to-br from-indigo-500 to-purple-600 relative overflow-hidden">
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-file-invoice-dollar text-6xl text-white/30"></i>
+                            </div>
+                            <div class="absolute top-4 left-4 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
+                                Invoicing Tips
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-center text-sm text-gray-500 mb-3">
+                                <span>Dec 10, 2024</span>
+                                <span class="mx-2">•</span>
+                                <span>5 min read</span>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2 dark:text-white group-hover:text-indigo-600 transition">10 Invoice Mistakes That Cost You Money</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Avoid these common invoicing pitfalls that could be delaying your payments and hurting your cash flow.</p>
+                            <a href="#" class="text-indigo-600 font-medium text-sm flex items-center group-hover:translate-x-1 transition">
+                                Read More <i class="fas fa-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </article>
+                    <!-- Blog Post 2 -->
+                    <article class="bg-gray-50 dark:bg-gray-700 rounded-2xl overflow-hidden hover-lift group">
+                        <div class="h-48 bg-gradient-to-br from-emerald-500 to-teal-600 relative overflow-hidden">
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-hand-holding-usd text-6xl text-white/30"></i>
+                            </div>
+                            <div class="absolute top-4 left-4 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
+                                Getting Paid
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-center text-sm text-gray-500 mb-3">
+                                <span>Dec 5, 2024</span>
+                                <span class="mx-2">•</span>
+                                <span>7 min read</span>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2 dark:text-white group-hover:text-indigo-600 transition">How to Get Clients to Pay You Faster</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">Proven strategies and psychological tactics to ensure you get paid on time, every time.</p>
+                            <a href="#" class="text-indigo-600 font-medium text-sm flex items-center group-hover:translate-x-1 transition">
+                                Read More <i class="fas fa-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </article>
+                    <!-- Blog Post 3 -->
+                    <article class="bg-gray-50 dark:bg-gray-700 rounded-2xl overflow-hidden hover-lift group">
+                        <div class="h-48 bg-gradient-to-br from-orange-500 to-pink-600 relative overflow-hidden">
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <i class="fas fa-chart-line text-6xl text-white/30"></i>
+                            </div>
+                            <div class="absolute top-4 left-4 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
+                                Freelance Life
+                            </div>
+                        </div>
+                        <div class="p-6">
+                            <div class="flex items-center text-sm text-gray-500 mb-3">
+                                <span>Nov 28, 2024</span>
+                                <span class="mx-2">•</span>
+                                <span>6 min read</span>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2 dark:text-white group-hover:text-indigo-600 transition">Setting Your Freelance Rates in 2025</h3>
+                            <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">A comprehensive guide to pricing your services competitively while maximizing your income.</p>
+                            <a href="#" class="text-indigo-600 font-medium text-sm flex items-center group-hover:translate-x-1 transition">
+                                Read More <i class="fas fa-arrow-right ml-2"></i>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+                <div class="text-center mt-12">
+                    <a href="#" class="inline-flex items-center text-indigo-600 font-semibold hover:text-indigo-800 transition">
+                        View All Articles <i class="fas fa-arrow-right ml-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Section -->
+        <div id="contact" class="py-20 bg-gray-50 dark:bg-gray-900">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="grid lg:grid-cols-2 gap-16">
+                    <div>
+                        <span class="inline-block px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-full text-sm font-medium mb-4">CONTACT US</span>
+                        <h2 class="text-4xl font-bold mb-6 dark:text-white">Get in <span class="gradient-text">Touch</span></h2>
+                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-8">
+                            Have a question or need help? We're here for you. Reach out and our friendly team will get back to you within 24 hours.
+                        </p>
+                        <div class="space-y-6">
+                            <div class="flex items-start">
+                                <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                                    <i class="fas fa-envelope text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold dark:text-white">Email Us</h4>
+                                    <p class="text-gray-500">support@invoiceflow.com</p>
+                                    <p class="text-gray-500">sales@invoiceflow.com</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                                    <i class="fas fa-comments text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold dark:text-white">Live Chat</h4>
+                                    <p class="text-gray-500">Available Mon-Fri, 9am-6pm EST</p>
+                                    <button class="text-indigo-600 font-medium mt-1 hover:underline">Start Chat →</button>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                                    <i class="fas fa-map-marker-alt text-white"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold dark:text-white">Office</h4>
+                                    <p class="text-gray-500">123 Innovation Drive<br>San Francisco, CA 94107</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex space-x-4 mt-8">
+                            <a href="#" class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white transition">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            <a href="#" class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white transition">
+                                <i class="fab fa-linkedin"></i>
+                            </a>
+                            <a href="#" class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white transition">
+                                <i class="fab fa-facebook"></i>
+                            </a>
+                            <a href="#" class="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-indigo-600 hover:text-white transition">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                        </div>
+                    </div>
+                    <div>
+                        <form class="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8" onsubmit="handleContactForm(event)">
+                            <h3 class="text-xl font-bold mb-6 dark:text-white">Send us a Message</h3>
+                            <div class="grid md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">First Name</label>
+                                    <input type="text" class="w-full px-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="John" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Last Name</label>
+                                    <input type="text" class="w-full px-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Doe" required>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2 dark:text-gray-300">Email</label>
+                                <input type="email" class="w-full px-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="you@example.com" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium mb-2 dark:text-gray-300">Subject</label>
+                                <select class="w-full px-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                    <option>General Inquiry</option>
+                                    <option>Technical Support</option>
+                                    <option>Sales Question</option>
+                                    <option>Partnership</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium mb-2 dark:text-gray-300">Message</label>
+                                <textarea class="w-full px-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" rows="4" placeholder="How can we help you?" required></textarea>
+                            </div>
+                            <button type="submit" class="w-full gradient-bg text-white py-4 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center">
+                                <i class="fas fa-paper-plane mr-2"></i> Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="gradient-bg py-20 relative overflow-hidden">
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                <div class="particle w-4 h-4 bg-white/20 rounded-full" style="left: 5%; top: 30%;"></div>
+                <div class="particle w-6 h-6 bg-white/10 rounded-full" style="left: 95%; top: 60%;"></div>
+            </div>
+            <div class="max-w-4xl mx-auto text-center px-4 relative z-10">
+                <h2 class="text-4xl font-bold text-white mb-6">Ready to Get Paid Faster?</h2>
+                <p class="text-xl text-white/80 mb-8">Join 50,000+ freelancers and businesses. Start your free trial today.</p>
+                <button onclick="showSection('signup')" class="bg-white text-indigo-600 px-10 py-4 rounded-full font-bold text-lg hover:bg-yellow-300 transition shadow-xl pulse-glow hover:scale-105">
+                    Start Your Free 14-Day Trial <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+                <p class="text-white/60 mt-4 text-sm flex items-center justify-center">
+                    <i class="fas fa-lock mr-2"></i> No credit card required • Cancel anytime
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-gray-900 text-white py-16">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="grid md:grid-cols-4 gap-8">
+                    <div>
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 gradient-bg rounded-xl flex items-center justify-center mr-2">
+                                <i class="fas fa-file-invoice-dollar text-lg text-white"></i>
+                            </div>
+                            <span class="text-xl font-bold">InvoiceFlow</span>
+                        </div>
+                        <p class="text-gray-400 mb-4">The smartest way to invoice clients and get paid on time.</p>
+                        <div class="flex items-center text-sm text-gray-400">
+                            <i class="fas fa-shield-alt text-green-500 mr-2"></i>
+                            SOC 2 Type II Certified
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4">Product</h4>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="#features" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>Features</a></li>
+                            <li><a href="#pricing" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>Pricing</a></li>
+                            <li><a href="#" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>Templates</a></li>
+                            <li><a href="#" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>Integrations</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4">Company</h4>
+                        <ul class="space-y-2 text-gray-400">
+                            <li><a href="#" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>About</a></li>
+                            <li><a href="#" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>Blog</a></li>
+                            <li><a href="#" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>Careers</a></li>
+                            <li><a href="#" class="hover:text-white transition flex items-center"><i class="fas fa-chevron-right text-xs mr-2"></i>Contact</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-4">Connect</h4>
+                        <div class="flex space-x-4 mb-4">
+                            <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-indigo-600 transition hover:scale-110"><i class="fab fa-twitter"></i></a>
+                            <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-indigo-600 transition hover:scale-110"><i class="fab fa-linkedin"></i></a>
+                            <a href="#" class="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center hover:bg-indigo-600 transition hover:scale-110"><i class="fab fa-github"></i></a>
+                        </div>
+                        <p class="text-gray-400 text-sm">support@invoiceflow.com</p>
+                    </div>
+                </div>
+                <div class="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-400 text-sm">
+                    <p>© 2024 InvoiceFlow. All rights reserved.</p>
+                    <div class="flex space-x-6 mt-4 md:mt-0">
+                        <a href="#" class="hover:text-white transition">Privacy Policy</a>
+                        <a href="#" class="hover:text-white transition">Terms of Service</a>
+                        <a href="#" class="hover:text-white transition">Security</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </section>
+
+    <!-- Login Section -->
+    <section id="login" class="section hidden min-h-screen flex items-center justify-center gradient-bg py-20">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 animate-scale-in">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-file-invoice-dollar text-2xl text-white"></i>
+                </div>
+                <h2 class="text-2xl font-bold dark:text-white">Welcome Back</h2>
+                <p class="text-gray-500">Sign in to your account</p>
+            </div>
+            
+            <!-- Login Attempt Warning -->
+            <div id="loginWarning" class="hidden bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
+                <i class="fas fa-exclamation-triangle mr-2"></i>
+                <span id="loginWarningText">Too many failed attempts. Please wait.</span>
+            </div>
+            
+            <form onsubmit="handleLogin(event)" id="loginForm">
+                <!-- CSRF Token (hidden) -->
+                <input type="hidden" id="loginCsrf" value="">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Email</label>
+                    <div class="relative">
+                        <i class="fas fa-envelope absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="email" id="loginEmail" class="w-full pl-12 pr-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="you@example.com" required autocomplete="email">
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" id="loginPassword" class="w-full pl-12 pr-12 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" onclick="togglePasswordVisibility('loginPassword', this)" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between mb-6">
+                    <label class="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                        <input type="checkbox" id="rememberMe" class="mr-2 rounded">
+                        Remember me
+                    </label>
+                    <a href="#" class="text-sm text-indigo-600 hover:underline">Forgot password?</a>
+                </div>
+                <button type="submit" id="loginBtn" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center">
+                    <span>Sign In</span>
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-gray-500">Don't have an account? <button onclick="showSection('signup')" class="text-indigo-600 font-semibold hover:underline">Sign up</button></p>
+            </div>
+            <button onclick="showSection('landing')" class="mt-4 w-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition flex items-center justify-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to home
+            </button>
+        </div>
+    </section>
+
+    <!-- Signup Section -->
+    <section id="signup" class="section hidden min-h-screen flex items-center justify-center gradient-bg py-20">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4 animate-scale-in">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-rocket text-2xl text-white"></i>
+                </div>
+                <h2 class="text-2xl font-bold dark:text-white">Start Your Free Trial</h2>
+                <p class="text-gray-500">14 days free, no credit card required</p>
+            </div>
+            <form onsubmit="handleSignup(event)" id="signupForm">
+                <!-- CSRF Token (hidden) -->
+                <input type="hidden" id="signupCsrf" value="">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Full Name</label>
+                    <div class="relative">
+                        <i class="fas fa-user absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="signupName" class="w-full pl-12 pr-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="John Doe" required autocomplete="name" minlength="2" maxlength="100">
+                    </div>
+                    <p id="nameError" class="text-red-500 text-xs mt-1 hidden"></p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Email</label>
+                    <div class="relative">
+                        <i class="fas fa-envelope absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="email" id="signupEmail" class="w-full pl-12 pr-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="you@example.com" required autocomplete="email">
+                    </div>
+                    <p id="emailError" class="text-red-500 text-xs mt-1 hidden"></p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Password</label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="password" id="signupPassword" class="w-full pl-12 pr-12 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="••••••••" required autocomplete="new-password" minlength="8">
+                        <button type="button" onclick="togglePasswordVisibility('signupPassword', this)" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <!-- Password Strength Indicator -->
+                    <div class="mt-2">
+                        <div class="bg-gray-200 dark:bg-gray-600 rounded-full h-1 overflow-hidden">
+                            <div id="passwordStrengthBar" class="strength-bar h-full transition-all" style="width: 0;"></div>
+                        </div>
+                        <p id="passwordStrengthText" class="text-xs mt-1 text-gray-500">Use 8+ characters, uppercase, numbers & symbols</p>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Business Name (Optional)</label>
+                    <div class="relative">
+                        <i class="fas fa-building absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="signupBusiness" class="w-full pl-12 pr-4 py-3 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="Your Company" maxlength="100">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="flex items-start text-sm text-gray-600 dark:text-gray-400">
+                        <input type="checkbox" id="termsAgree" class="mr-2 mt-1 rounded" required>
+                        <span>I agree to the <a href="#" class="text-indigo-600 hover:underline">Terms of Service</a> and <a href="#" class="text-indigo-600 hover:underline">Privacy Policy</a></span>
+                    </label>
+                </div>
+                <button type="submit" id="signupBtn" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center">
+                    <span>Create Account</span>
+                </button>
+            </form>
+            
+            <div class="mt-6 text-center">
+                <p class="text-gray-500">Already have an account? <button onclick="showSection('login')" class="text-indigo-600 font-semibold hover:underline">Sign in</button></p>
+            </div>
+            <button onclick="showSection('landing')" class="mt-4 w-full text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition flex items-center justify-center">
+                <i class="fas fa-arrow-left mr-2"></i> Back to home
+            </button>
+        </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="section hidden pt-16 min-h-screen bg-gray-100 dark:bg-gray-900 overflow-x-hidden">
+        <div class="flex w-full max-w-full overflow-x-hidden">
+            <!-- Sidebar -->
+            <aside class="w-64 bg-white dark:bg-gray-800 min-h-screen shadow-lg fixed left-0 top-16 hidden lg:block">
+                <nav class="p-4">
+                    <ul class="space-y-2">
+                        <li>
+                            <button onclick="showDashboardTab('overview')" class="dash-nav-btn w-full flex items-center px-4 py-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 transition-all">
+                                <i class="fas fa-home mr-3"></i> Dashboard
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showDashboardTab('invoices')" class="dash-nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all">
+                                <i class="fas fa-file-invoice mr-3"></i> Invoices
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showDashboardTab('clients')" class="dash-nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all">
+                                <i class="fas fa-users mr-3"></i> Clients
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showDashboardTab('create')" class="dash-nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all">
+                                <i class="fas fa-plus-circle mr-3"></i> Create
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showDashboardTab('settings')" class="dash-nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-all">
+                                <i class="fas fa-cog mr-3"></i> Settings
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="logout()" class="dash-nav-btn w-full flex items-center px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 text-red-500 transition-all">
+                                <i class="fas fa-sign-out-alt mr-3"></i> Logout
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="mt-8 p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl text-white">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-crown text-yellow-300 mr-2"></i>
+                            <h4 class="font-semibold">Upgrade to Pro</h4>
+                        </div>
+                        <p class="text-sm text-white/80 mb-3">Get unlimited invoices and more features</p>
+                        <button class="w-full bg-white text-indigo-600 py-2 rounded-lg font-semibold text-sm hover:bg-yellow-300 transition">Upgrade Now</button>
+                    </div>
+                    
+                    <!-- Session Info -->
+                    <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-xs text-gray-500 dark:text-gray-400">
+                        <div class="flex items-center mb-1">
+                            <i class="fas fa-shield-alt text-green-500 mr-2"></i>
+                            <span>Session Secure</span>
+                        </div>
+                        <p id="sessionTimer">Expires in: 30:00</p>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 lg:ml-64 p-4 md:p-6 w-full max-w-full overflow-x-hidden">
+                <!-- Mobile Nav -->
+                <div class="lg:hidden flex overflow-x-auto space-x-2 mb-6 pb-2 -mx-2 px-2">
+                    <button onclick="showDashboardTab('overview')" class="dash-mob-btn px-4 py-2 bg-indigo-600 text-white rounded-full whitespace-nowrap transition-all">Dashboard</button>
+                    <button onclick="showDashboardTab('invoices')" class="dash-mob-btn px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-full whitespace-nowrap transition-all">Invoices</button>
+                    <button onclick="showDashboardTab('clients')" class="dash-mob-btn px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-full whitespace-nowrap transition-all">Clients</button>
+                    <button onclick="showDashboardTab('create')" class="dash-mob-btn px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-full whitespace-nowrap transition-all">Create</button>
+                    <button onclick="showDashboardTab('settings')" class="dash-mob-btn px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-full whitespace-nowrap transition-all">Settings</button>
+                    <button onclick="logout()" class="dash-mob-btn px-4 py-2 bg-red-500 text-white rounded-full whitespace-nowrap transition-all">Logout</button>
+                </div>
+
+                <!-- Dashboard Header -->
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8 animate-slide-up">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Welcome back, <span id="userName" class="gradient-text">User</span>! 👋</h1>
+                        <p class="text-gray-500">Here's what's happening with your invoices</p>
+                    </div>
+                    <button onclick="showDashboardTab('create')" class="mt-4 md:mt-0 gradient-bg text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center hover:scale-105">
+                        <i class="fas fa-plus mr-2"></i> New Invoice
+                    </button>
+                </div>
+
+                <!-- Overview Tab -->
+                <div id="tab-overview" class="dash-tab">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover-lift animate-slide-up" style="animation-delay: 0.1s;">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-dollar-sign text-green-600 dark:text-green-400 text-xl"></i>
+                                </div>
+                                <span class="text-green-500 text-sm font-medium flex items-center">
+                                    <i class="fas fa-arrow-up mr-1"></i>12.5%
+                                </span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 dark:text-white" id="totalRevenue">$0</h3>
+                            <p class="text-gray-500 text-sm">Total Revenue</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover-lift animate-slide-up" style="animation-delay: 0.2s;">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-clock text-yellow-600 dark:text-yellow-400 text-xl"></i>
+                                </div>
+                                <span class="text-yellow-500 text-sm font-medium" id="pendingCount">0 pending</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 dark:text-white" id="pendingAmount">$0</h3>
+                            <p class="text-gray-500 text-sm">Pending Payments</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover-lift animate-slide-up" style="animation-delay: 0.3s;">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-file-invoice text-blue-600 dark:text-blue-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 dark:text-white" id="totalInvoices">0</h3>
+                            <p class="text-gray-500 text-sm">Total Invoices</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm hover-lift animate-slide-up" style="animation-delay: 0.4s;">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-users text-purple-600 dark:text-purple-400 text-xl"></i>
+                                </div>
+                            </div>
+                            <h3 class="text-2xl font-bold text-gray-800 dark:text-white" id="totalClients">0</h3>
+                            <p class="text-gray-500 text-sm">Active Clients</p>
+                        </div>
+                    </div>
+
+                    <!-- Recent Invoices -->
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm animate-slide-up" style="animation-delay: 0.5s;">
+                        <div class="p-6 border-b dark:border-gray-700 flex items-center justify-between">
+                            <h2 class="text-lg font-semibold dark:text-white">Recent Invoices</h2>
+                            <button onclick="showDashboardTab('invoices')" class="text-indigo-600 text-sm hover:underline">View All</button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Invoice</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Client</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentInvoicesTable">
+                                    <tr class="text-center text-gray-500 dark:text-gray-400">
+                                        <td colspan="5" class="py-12">
+                                            <i class="fas fa-file-invoice text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                            <p>No invoices yet. Create your first invoice!</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoices Tab -->
+                <div id="tab-invoices" class="dash-tab hidden">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+                        <div class="p-6 border-b dark:border-gray-700 flex flex-col md:flex-row md:items-center md:justify-between">
+                            <h2 class="text-lg font-semibold dark:text-white">All Invoices</h2>
+                            <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                                <div class="relative">
+                                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    <input type="text" placeholder="Search invoices..." class="pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 w-48" onkeyup="searchInvoices(this.value)">
+                                </div>
+                                <select class="px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" onchange="filterInvoices(this.value)">
+                                    <option value="all">All Status</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="overdue">Overdue</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 dark:bg-gray-700">
+                                    <tr>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Invoice</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Client</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Amount</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Status</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Due Date</th>
+                                        <th class="text-left py-3 px-6 text-sm font-medium text-gray-500 dark:text-gray-400">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allInvoicesTable">
+                                    <tr class="text-center text-gray-500 dark:text-gray-400">
+                                        <td colspan="6" class="py-12">
+                                            <i class="fas fa-file-invoice text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                            <p>No invoices yet</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients Tab -->
+                <div id="tab-clients" class="dash-tab hidden">
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+                        <div class="p-6 border-b dark:border-gray-700 flex flex-col md:flex-row md:items-center md:justify-between">
+                            <h2 class="text-lg font-semibold dark:text-white">Your Clients</h2>
+                            <button onclick="showAddClientModal()" class="mt-4 md:mt-0 gradient-bg text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition hover:scale-105">
+                                <i class="fas fa-plus mr-2"></i> Add Client
+                            </button>
+                        </div>
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 p-6" id="clientsGrid">
+                            <div class="text-center text-gray-500 dark:text-gray-400 col-span-full py-12">
+                                <i class="fas fa-users text-4xl text-gray-300 dark:text-gray-600 mb-3"></i>
+                                <p>No clients yet. Add your first client!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Create Invoice Tab -->
+                <div id="tab-create" class="dash-tab hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
+                        <!-- Invoice Form -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 animate-slide-up">
+                            <h2 class="text-lg font-semibold mb-6 dark:text-white flex items-center">
+                                <i class="fas fa-file-invoice text-indigo-600 mr-2"></i>
+                                Create New Invoice
+                            </h2>
+                            <form onsubmit="createInvoice(event)" id="invoiceForm">
+                                <input type="hidden" id="invoiceCsrf" value="">
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2 dark:text-gray-300">Invoice Number</label>
+                                        <input type="text" id="invoiceNumber" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-gray-50 dark:bg-gray-700 text-sm" value="" readonly>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2 dark:text-gray-300">Due Date</label>
+                                        <input type="date" id="dueDate" class="w-full px-3 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" required>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Client</label>
+                                    <select id="invoiceClient" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" required>
+                                        <option value="">Select a client</option>
+                                    </select>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Items</label>
+                                    <div id="invoiceItems" class="space-y-3">
+                                        <div class="flex flex-wrap items-center gap-2 invoice-item">
+                                            <input type="text" placeholder="Description" class="flex-1 min-w-[150px] px-3 py-2 border dark:border-gray-600 rounded-lg item-desc text-sm" maxlength="200">
+                                            <input type="number" placeholder="Qty" class="w-16 md:w-20 px-2 py-2 border dark:border-gray-600 rounded-lg item-qty text-sm" value="1" min="1" max="9999">
+                                            <input type="number" placeholder="Price" class="w-20 md:w-28 px-2 py-2 border dark:border-gray-600 rounded-lg item-price text-sm" step="0.01" min="0" max="999999.99">
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="addInvoiceItem()" class="mt-3 text-indigo-600 font-medium hover:text-indigo-800 transition flex items-center">
+                                        <i class="fas fa-plus-circle mr-2"></i> Add Item
+                                    </button>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Notes</label>
+                                    <textarea id="invoiceNotes" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" rows="3" placeholder="Payment terms, thank you message, etc." maxlength="500"></textarea>
+                                </div>
+                                <div class="flex items-center justify-between border-t dark:border-gray-700 pt-4">
+                                    <div class="text-xl font-bold dark:text-white">Total: <span id="invoiceTotal" class="gradient-text">$0.00</span></div>
+                                    <button type="submit" id="createInvoiceBtn" class="gradient-bg text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center hover:scale-105">
+                                        <i class="fas fa-paper-plane mr-2"></i> Create Invoice
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Invoice Preview -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 md:p-6 animate-slide-up" style="animation-delay: 0.1s;">
+                            <div class="flex items-center justify-between mb-4 md:mb-6 flex-wrap gap-2">
+                                <h2 class="text-base md:text-lg font-semibold dark:text-white flex items-center">
+                                    <i class="fas fa-eye text-indigo-600 mr-2"></i>
+                                    Preview
+                                </h2>
+                                <button onclick="downloadInvoicePDF()" class="px-3 py-2 md:px-4 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition flex items-center text-sm md:text-base">
+                                    <i class="fas fa-download mr-1 md:mr-2"></i> <span class="hidden sm:inline">Download</span> PDF
+                                </button>
+                            </div>
+                            <div id="invoicePreview" class="border dark:border-gray-700 rounded-xl p-3 md:p-6 invoice-preview bg-white overflow-hidden">
+                                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 md:mb-8 gap-2">
+                                    <div>
+                                        <h3 class="text-xl md:text-2xl font-bold gradient-text">INVOICE</h3>
+                                        <p class="text-gray-500 text-sm" id="previewInvoiceNum">#INV-0001</p>
+                                    </div>
+                                    <div class="sm:text-right">
+                                        <p class="font-semibold dark:text-white text-sm md:text-base" id="previewUserName">Your Business</p>
+                                        <p class="text-gray-500 text-xs md:text-sm" id="previewUserEmail">email@example.com</p>
+                                    </div>
+                                </div>
+                                <div class="mb-4 md:mb-6">
+                                    <p class="text-xs md:text-sm text-gray-500 mb-1">Bill To:</p>
+                                    <p class="font-semibold dark:text-white text-sm md:text-base" id="previewClientName">Select a client</p>
+                                    <p class="text-gray-500 text-xs md:text-sm" id="previewClientEmail"></p>
+                                </div>
+                                <div class="border-t border-b dark:border-gray-600 py-3 md:py-4 my-3 md:my-4 text-sm" id="previewItems">
+                                    <p class="text-gray-400 text-center text-xs md:text-sm">Add items to see preview</p>
+                                </div>
+                                <div class="flex justify-end">
+                                    <div class="text-right">
+                                        <p class="text-gray-500 mb-1 md:mb-2 text-xs md:text-sm">Total Amount</p>
+                                        <p class="text-xl md:text-3xl font-bold gradient-text" id="previewTotal">$0.00</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="tab-settings" class="dash-tab hidden">
+                    <div class="max-w-2xl">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6 animate-slide-up">
+                            <h2 class="text-lg font-semibold mb-6 dark:text-white flex items-center">
+                                <i class="fas fa-user-cog text-indigo-600 mr-2"></i>
+                                Profile Settings
+                            </h2>
+                            <form onsubmit="saveSettings(event)">
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Business Name</label>
+                                    <input type="text" id="settingsBusiness" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Your Business Name" maxlength="100">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Email</label>
+                                    <input type="email" id="settingsEmail" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-gray-50 dark:bg-gray-700" readonly>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Address</label>
+                                    <textarea id="settingsAddress" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" rows="2" placeholder="Your business address" maxlength="300"></textarea>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Default Payment Terms</label>
+                                    <select id="settingsTerms" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                                        <option value="7">Net 7 days</option>
+                                        <option value="14">Net 14 days</option>
+                                        <option value="30" selected>Net 30 days</option>
+                                        <option value="60">Net 60 days</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="gradient-bg text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition hover:scale-105">
+                                    <i class="fas fa-save mr-2"></i>Save Settings
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <!-- Security Settings -->
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6 animate-slide-up" style="animation-delay: 0.1s;">
+                            <h2 class="text-lg font-semibold mb-6 dark:text-white flex items-center">
+                                <i class="fas fa-shield-alt text-green-600 mr-2"></i>
+                                Security
+                            </h2>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-key text-indigo-600 mr-3"></i>
+                                        <div>
+                                            <p class="font-medium dark:text-white">Two-Factor Authentication</p>
+                                            <p class="text-sm text-gray-500">Add extra security to your account</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900 transition text-sm font-medium">Enable</button>
+                                </div>
+                                <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-history text-indigo-600 mr-3"></i>
+                                        <div>
+                                            <p class="font-medium dark:text-white">Login History</p>
+                                            <p class="text-sm text-gray-500">View recent login activity</p>
+                                        </div>
+                                    </div>
+                                    <button class="px-4 py-2 text-indigo-600 hover:underline text-sm font-medium">View</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 animate-slide-up" style="animation-delay: 0.2s;">
+                            <h2 class="text-lg font-semibold mb-4 dark:text-white flex items-center">
+                                <i class="fas fa-crown text-yellow-500 mr-2"></i>
+                                Subscription
+                            </h2>
+                            <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div>
+                                    <p class="font-semibold dark:text-white">Current Plan: <span class="text-indigo-600" id="currentPlan">Free</span></p>
+                                    <p class="text-sm text-gray-500">5 invoices/month</p>
+                                </div>
+                                <button class="gradient-bg text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition">Upgrade</button>
+                            </div>
+                        </div>
+                        <button onclick="logout()" class="mt-6 w-full py-3 border-2 border-red-500 text-red-500 rounded-lg font-semibold hover:bg-red-50 dark:hover:bg-red-900/30 transition flex items-center justify-center">
+                            <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </section>
+
+    <!-- Add Client Modal -->
+    <div id="clientModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 w-full max-w-md mx-4 animate-scale-in">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold dark:text-white flex items-center">
+                    <i class="fas fa-user-plus text-indigo-600 mr-2"></i>
+                    Add New Client
+                </h2>
+                <button onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <form onsubmit="addClient(event)" id="clientForm">
+                <input type="hidden" id="clientCsrf" value="">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Client Name *</label>
+                    <input type="text" id="clientName" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" required maxlength="100" autocomplete="off">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Email *</label>
+                    <input type="email" id="clientEmail" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" required autocomplete="off">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Company</label>
+                    <input type="text" id="clientCompany" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" maxlength="100" autocomplete="off">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2 dark:text-gray-300">Phone</label>
+                    <input type="tel" id="clientPhone" class="w-full px-4 py-2 border dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500" pattern="[0-9+\-\s()]+" maxlength="20" autocomplete="off">
+                </div>
+                <button type="submit" id="addClientBtn" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center">
+                    <span>Add Client</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-4 right-4 px-6 py-4 rounded-xl shadow-2xl hidden transform translate-y-10 transition-all z-50 flex items-center max-w-sm">
+        <i id="toastIcon" class="fas fa-check-circle text-xl mr-3"></i>
+        <span id="toastMessage" class="flex-1">Success!</span>
+        <button onclick="hideToast()" class="ml-4 hover:opacity-70"><i class="fas fa-times"></i></button>
+    </div>
+
+    <script>
+        // ==================== SECURITY MODULE ====================
+        const Security = {
+            // Simple hash function (simulation - use bcrypt in production)
+            hash: function(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return 'hash_' + Math.abs(hash).toString(16) + '_' + Date.now().toString(36);
+            },
+            
+            // Generate CSRF Token
+            generateCSRFToken: function() {
+                const array = new Uint8Array(32);
+                crypto.getRandomValues(array);
+                return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+            },
+            
+            // Generate secure ID
+            generateSecureId: function(prefix = 'id') {
+                const array = new Uint8Array(16);
+                crypto.getRandomValues(array);
+                return prefix + '_' + Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+            },
+            
+            // Sanitize HTML to prevent XSS
+            sanitizeHTML: function(str) {
+                if (!str) return '';
+                const temp = document.createElement('div');
+                temp.textContent = str;
+                return temp.innerHTML;
+            },
+            
+            // Validate email
+            validateEmail: function(email) {
+                const re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+                return re.test(email.toLowerCase());
+            },
+            
+            // Validate password strength
+            checkPasswordStrength: function(password) {
+                let strength = 0;
+                if (password.length >= 8) strength++;
+                if (password.length >= 12) strength++;
+                if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+                if (/\d/.test(password)) strength++;
+                if (/[^a-zA-Z0-9]/.test(password)) strength++;
+                return strength;
+            },
+            
+            // Rate limiting
+            rateLimiter: {
+                attempts: {},
+                maxAttempts: 5,
+                windowMs: 300000, // 5 minutes
+                
+                check: function(key) {
+                    const now = Date.now();
+                    if (!this.attempts[key]) {
+                        this.attempts[key] = { count: 0, firstAttempt: now };
+                    }
+                    
+                    if (now - this.attempts[key].firstAttempt > this.windowMs) {
+                        this.attempts[key] = { count: 0, firstAttempt: now };
+                    }
+                    
+                    return this.attempts[key].count < this.maxAttempts;
+                },
+                
+                increment: function(key) {
+                    if (!this.attempts[key]) {
+                        this.attempts[key] = { count: 0, firstAttempt: Date.now() };
+                    }
+                    this.attempts[key].count++;
+                },
+                
+                reset: function(key) {
+                    delete this.attempts[key];
+                },
+                
+                getRemainingTime: function(key) {
+                    if (!this.attempts[key]) return 0;
+                    const elapsed = Date.now() - this.attempts[key].firstAttempt;
+                    return Math.max(0, Math.ceil((this.windowMs - elapsed) / 1000));
+                }
+            },
+            
+            // Session management
+            session: {
+                duration: 30 * 60 * 1000, // 30 minutes
+                token: null,
+                expiry: null,
+                timer: null,
+                
+                create: function() {
+                    this.token = Security.generateCSRFToken();
+                    this.expiry = Date.now() + this.duration;
+                    this.startTimer();
+                    return this.token;
+                },
+                
+                isValid: function() {
+                    return this.token && Date.now() < this.expiry;
+                },
+                
+                refresh: function() {
+                    if (this.token) {
+                        this.expiry = Date.now() + this.duration;
+                    }
+                },
+                
+                destroy: function() {
+                    this.token = null;
+                    this.expiry = null;
+                    if (this.timer) clearInterval(this.timer);
+                },
+                
+                startTimer: function() {
+                    if (this.timer) clearInterval(this.timer);
+                    this.timer = setInterval(() => {
+                        const remaining = Math.max(0, this.expiry - Date.now());
+                        const minutes = Math.floor(remaining / 60000);
+                        const seconds = Math.floor((remaining % 60000) / 1000);
+                        const timerEl = document.getElementById('sessionTimer');
+                        if (timerEl) {
+                            timerEl.textContent = `Expires in: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+                        }
+                        if (remaining <= 0) {
+                            logout();
+                            showToast('Session expired. Please login again.', 'warning');
+                        }
+                    }, 1000);
+                }
+            }
+        };
+
+        // ==================== DATA STORE ====================
+        let appData = {
+            user: null,
+            clients: [],
+            invoices: [],
+            settings: {}
+        };
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            initializeDarkMode();
+            generateCSRFTokens();
+            
+            if (appData.user && Security.session.create()) {
+                showSection('dashboard');
+                updateDashboard();
+            }
+            
+            setDefaultDueDate();
+            updateInvoiceNumber();
+            setupItemListeners();
+            setupPasswordStrengthChecker();
+            
+            // Refresh session on activity
+            document.addEventListener('click', () => Security.session.refresh());
+            document.addEventListener('keypress', () => Security.session.refresh());
+        });
+
+        // Generate CSRF tokens for all forms
+        function generateCSRFTokens() {
+            const token = Security.generateCSRFToken();
+            document.querySelectorAll('[id$="Csrf"]').forEach(el => el.value = token);
+        }
+
+        // ==================== DARK MODE ====================
+        function initializeDarkMode() {
+            const isDark = localStorage.getItem('darkMode') === 'true' || 
+                          (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            }
+        }
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+        }
+
+        // ==================== DATA PERSISTENCE ====================
+        function saveData() {
+            try {
+                const encrypted = btoa(JSON.stringify(appData)); // Simple encoding (use proper encryption in production)
+                localStorage.setItem('invoiceFlowData', encrypted);
+            } catch (e) {
+                console.error('Failed to save data');
+            }
+        }
+
+        function loadData() {
+            try {
+                const saved = localStorage.getItem('invoiceFlowData');
+                if (saved) {
+                    appData = JSON.parse(atob(saved));
+                }
+            } catch (e) {
+                console.error('Failed to load data');
+                localStorage.removeItem('invoiceFlowData');
+            }
+        }
+
+        // ==================== NAVIGATION ====================
+        function showSection(sectionId) {
+            // Check session for protected routes
+            if (sectionId === 'dashboard' && !Security.session.isValid()) {
+                showSection('login');
+                showToast('Please login to continue', 'warning');
+                return;
+            }
+            
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            const section = document.getElementById(sectionId);
+            if (section) {
+                section.classList.remove('hidden');
+            }
+            
+            if (sectionId === 'dashboard') {
+                updateDashboard();
+            }
+            if (sectionId === 'landing') {
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function showDashboardTab(tabId) {
+            document.querySelectorAll('.dash-tab').forEach(t => t.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            // Update nav buttons
+            document.querySelectorAll('.dash-nav-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-50', 'dark:bg-indigo-900/50', 'text-indigo-600', 'dark:text-indigo-400');
+                btn.classList.add('hover:bg-gray-50', 'dark:hover:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+            });
+            
+            const activeBtn = document.querySelectorAll('.dash-nav-btn')[['overview', 'invoices', 'clients', 'create', 'settings'].indexOf(tabId)];
+            if (activeBtn) {
+                activeBtn.classList.add('bg-indigo-50', 'dark:bg-indigo-900/50', 'text-indigo-600', 'dark:text-indigo-400');
+                activeBtn.classList.remove('hover:bg-gray-50', 'dark:hover:bg-gray-700', 'text-gray-600', 'dark:text-gray-300');
+            }
+            
+            document.querySelectorAll('.dash-mob-btn').forEach((btn, i) => {
+                // Skip the logout button (last one)
+                if (i === 5) return;
+                if (['overview', 'invoices', 'clients', 'create', 'settings'][i] === tabId) {
+                    btn.classList.add('bg-indigo-600', 'text-white');
+                    btn.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                    btn.classList.add('bg-gray-200', 'dark:bg-gray-700');
+                }
+            });
+            
+            if (tabId === 'create') {
+                updateInvoiceNumber();
+                setDefaultDueDate();
+            }
+        }
+
+        // ==================== PRICING TOGGLE ====================
+        function togglePricing(type) {
+            const amounts = document.querySelectorAll('.pricing-amount');
+            const monthlyBtn = document.getElementById('monthlyBtn');
+            const yearlyBtn = document.getElementById('yearlyBtn');
+            
+            if (type === 'yearly') {
+                amounts.forEach(el => el.textContent = '$' + el.dataset.yearly);
+                yearlyBtn.classList.add('gradient-bg', 'text-white');
+                yearlyBtn.classList.remove('text-gray-600', 'dark:text-gray-300');
+                monthlyBtn.classList.remove('gradient-bg', 'text-white');
+                monthlyBtn.classList.add('text-gray-600', 'dark:text-gray-300');
+            } else {
+                amounts.forEach(el => el.textContent = '$' + el.dataset.monthly);
+                monthlyBtn.classList.add('gradient-bg', 'text-white');
+                monthlyBtn.classList.remove('text-gray-600', 'dark:text-gray-300');
+                yearlyBtn.classList.remove('gradient-bg', 'text-white');
+                yearlyBtn.classList.add('text-gray-600', 'dark:text-gray-300');
+            }
+        }
+
+        // ==================== PASSWORD VISIBILITY ====================
+        function togglePasswordVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // ==================== PASSWORD STRENGTH CHECKER ====================
+        function setupPasswordStrengthChecker() {
+            const passwordInput = document.getElementById('signupPassword');
+            if (!passwordInput) return;
+            
+            passwordInput.addEventListener('input', function() {
+                const strength = Security.checkPasswordStrength(this.value);
+                const bar = document.getElementById('passwordStrengthBar');
+                const text = document.getElementById('passwordStrengthText');
+                
+                bar.className = 'strength-bar h-full transition-all';
+                
+                if (this.value.length === 0) {
+                    bar.style.width = '0';
+                    text.textContent = 'Use 8+ characters, uppercase, numbers & symbols';
+                    text.className = 'text-xs mt-1 text-gray-500';
+                } else if (strength <= 2) {
+                    bar.classList.add('strength-weak');
+                    text.textContent = 'Weak password';
+                    text.className = 'text-xs mt-1 text-red-500';
+                } else if (strength <= 3) {
+                    bar.classList.add('strength-medium');
+                    text.textContent = 'Medium strength';
+                    text.className = 'text-xs mt-1 text-yellow-500';
+                } else {
+                    bar.classList.add('strength-strong');
+                    text.textContent = 'Strong password';
+                    text.className = 'text-xs mt-1 text-green-500';
+                }
+            });
+        }
+
+        // ==================== AUTHENTICATION ====================
+        function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = Security.sanitizeHTML(document.getElementById('loginEmail').value.trim().toLowerCase());
+            const password = document.getElementById('loginPassword').value;
+            const warning = document.getElementById('loginWarning');
+            const warningText = document.getElementById('loginWarningText');
+            const btn = document.getElementById('loginBtn');
+            
+            // Rate limiting check
+            if (!Security.rateLimiter.check(email)) {
+                const remaining = Security.rateLimiter.getRemainingTime(email);
+                warning.classList.remove('hidden');
+                warningText.textContent = `Too many attempts. Try again in ${Math.ceil(remaining / 60)} minutes.`;
+                document.getElementById('loginForm').classList.add('animate-shake');
+                setTimeout(() => document.getElementById('loginForm').classList.remove('animate-shake'), 500);
+                return;
+            }
+            
+            // Email validation
+            if (!Security.validateEmail(email)) {
+                showToast('Please enter a valid email address', 'error');
+                return;
+            }
+            
+            // Show loading
+            btn.classList.add('btn-loading');
+            btn.innerHTML = '<span class="spinner mr-2"></span> Signing in...';
+            
+            // Simulate network delay
+            setTimeout(() => {
+                if (appData.user && appData.user.email === email) {
+                    Security.rateLimiter.reset(email);
+                    Security.session.create();
+                    warning.classList.add('hidden');
+                    showSection('dashboard');
+                    showToast('Welcome back! 👋', 'success');
+                } else {
+                    Security.rateLimiter.increment(email);
+                    warning.classList.remove('hidden');
+                    warningText.textContent = `Invalid credentials. ${5 - (Security.rateLimiter.attempts[email]?.count || 0)} attempts remaining.`;
+                    document.getElementById('loginForm').classList.add('animate-shake');
+                    setTimeout(() => document.getElementById('loginForm').classList.remove('animate-shake'), 500);
+                }
+                
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '<span>Sign In</span>';
+            }, 800);
+        }
+
+        function handleSignup(e) {
+            e.preventDefault();
+            
+            const name = Security.sanitizeHTML(document.getElementById('signupName').value.trim());
+            const email = Security.sanitizeHTML(document.getElementById('signupEmail').value.trim().toLowerCase());
+            const password = document.getElementById('signupPassword').value;
+            const business = Security.sanitizeHTML(document.getElementById('signupBusiness').value.trim()) || name;
+            const btn = document.getElementById('signupBtn');
+            
+            // Validate name
+            if (name.length < 2) {
+                showToast('Name must be at least 2 characters', 'error');
+                return;
+            }
+            
+            // Validate email
+            if (!Security.validateEmail(email)) {
+                showToast('Please enter a valid email address', 'error');
+                return;
+            }
+            
+            // Validate password strength
+            if (Security.checkPasswordStrength(password) < 3) {
+                showToast('Please choose a stronger password', 'error');
+                return;
+            }
+            
+            // Show loading
+            btn.classList.add('btn-loading');
+            btn.innerHTML = '<span class="spinner mr-2"></span> Creating account...';
+            
+            setTimeout(() => {
+                appData.user = {
+                    id: Security.generateSecureId('user'),
+                    name,
+                    email,
+                    passwordHash: Security.hash(password),
+                    business,
+                    createdAt: new Date().toISOString()
+                };
+                
+                appData.settings = {
+                    business,
+                    email,
+                    address: '',
+                    paymentTerms: 30
+                };
+                
+                saveData();
+                Security.session.create();
+                showSection('dashboard');
+                showToast('Welcome to InvoiceFlow! 🎉', 'success');
+                
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = '<span>Create Account</span>';
+            }, 1000);
+        }
+
+        function logout() {
+            Security.session.destroy();
+            appData.user = null;
+            saveData();
+            showSection('landing');
+            showToast('Logged out successfully', 'success');
+        }
+
+        // ==================== DASHBOARD ====================
+        function updateDashboard() {
+            if (!appData.user) return;
+            
+            const safeUserName = Security.sanitizeHTML(appData.user.name.split(' ')[0]);
+            document.getElementById('userName').textContent = safeUserName;
+            document.getElementById('previewUserName').textContent = Security.sanitizeHTML(appData.settings.business || appData.user.name);
+            document.getElementById('previewUserEmail').textContent = Security.sanitizeHTML(appData.user.email);
+            document.getElementById('settingsBusiness').value = appData.settings.business || '';
+            document.getElementById('settingsEmail').value = appData.user.email;
+            document.getElementById('settingsAddress').value = appData.settings.address || '';
+            
+            // Calculate stats
+            const totalRevenue = appData.invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0);
+            const pendingInvoices = appData.invoices.filter(i => i.status === 'pending');
+            const pendingAmount = pendingInvoices.reduce((sum, i) => sum + i.total, 0);
+            
+            document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+            document.getElementById('pendingAmount').textContent = formatCurrency(pendingAmount);
+            document.getElementById('pendingCount').textContent = `${pendingInvoices.length} pending`;
+            document.getElementById('totalInvoices').textContent = appData.invoices.length;
+            document.getElementById('totalClients').textContent = appData.clients.length;
+            
+            updateInvoiceTables();
+            updateClientsGrid();
+            updateClientSelect();
+        }
+
+        function updateInvoiceTables() {
+            const recentTable = document.getElementById('recentInvoicesTable');
+            const allTable = document.getElementById('allInvoicesTable');
+            
+            if (appData.invoices.length === 0) {
+                recentTable.innerHTML = `<tr class="text-center text-gray-500 dark:text-gray-400">
+                    <td colspan="5" class="py-12">
+                        <i class="fas fa-file-invoice text-4xl text-gray-300 dark:text-gray-600 mb-3 block"></i>
+                        <p>No invoices yet. Create your first invoice!</p>
+                    </td>
+                </tr>`;
+                allTable.innerHTML = recentTable.innerHTML.replace('5', '6');
+                return;
+            }
+            
+            const statusClasses = {
+                paid: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400',
+                pending: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-600 dark:text-yellow-400',
+                overdue: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400'
+            };
+            
+            const invoiceRows = appData.invoices.slice(-5).reverse().map(inv => `
+                <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <td class="py-4 px-6 font-medium dark:text-white">${Security.sanitizeHTML(inv.number)}</td>
+                    <td class="py-4 px-6 dark:text-gray-300">${Security.sanitizeHTML(inv.clientName)}</td>
+                    <td class="py-4 px-6 font-semibold dark:text-white">${formatCurrency(inv.total)}</td>
+                    <td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-sm font-medium ${statusClasses[inv.status]}">${inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}</span></td>
+                    <td class="py-4 px-6 text-gray-500">${formatDate(inv.dueDate)}</td>
+                </tr>
+            `).join('');
+            
+            recentTable.innerHTML = invoiceRows;
+            
+            const allRows = appData.invoices.slice().reverse().map(inv => `
+                <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                    <td class="py-4 px-6 font-medium dark:text-white">${Security.sanitizeHTML(inv.number)}</td>
+                    <td class="py-4 px-6 dark:text-gray-300">${Security.sanitizeHTML(inv.clientName)}</td>
+                    <td class="py-4 px-6 font-semibold dark:text-white">${formatCurrency(inv.total)}</td>
+                    <td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-sm font-medium ${statusClasses[inv.status]}">${inv.status.charAt(0).toUpperCase() + inv.status.slice(1)}</span></td>
+                    <td class="py-4 px-6 text-gray-500">${formatDate(inv.dueDate)}</td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="downloadSavedInvoicePDF('${Security.sanitizeHTML(inv.id)}')" class="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-800 transition flex items-center justify-center tooltip" data-tip="Download PDF"><i class="fas fa-file-pdf"></i></button>
+                            <button onclick="markAsPaid('${Security.sanitizeHTML(inv.id)}')" class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800 transition flex items-center justify-center tooltip" data-tip="Mark Paid"><i class="fas fa-check"></i></button>
+                            <button onclick="sendReminder('${Security.sanitizeHTML(inv.id)}')" class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-800 transition flex items-center justify-center tooltip" data-tip="Send Reminder"><i class="fas fa-bell"></i></button>
+                            <button onclick="deleteInvoice('${Security.sanitizeHTML(inv.id)}')" class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800 transition flex items-center justify-center tooltip" data-tip="Delete"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            allTable.innerHTML = allRows;
+        }
+
+        function updateClientsGrid() {
+            const grid = document.getElementById('clientsGrid');
+            
+            if (appData.clients.length === 0) {
+                grid.innerHTML = `<div class="text-center text-gray-500 dark:text-gray-400 col-span-full py-12">
+                    <i class="fas fa-users text-4xl text-gray-300 dark:text-gray-600 mb-3 block"></i>
+                    <p>No clients yet. Add your first client!</p>
+                </div>`;
+                return;
+            }
+            
+            grid.innerHTML = appData.clients.map(client => {
+                const clientInvoices = appData.invoices.filter(i => i.clientId === client.id);
+                const totalBilled = clientInvoices.reduce((sum, i) => sum + i.total, 0);
+                return `
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-xl p-6 hover:shadow-lg transition hover-lift">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 gradient-bg rounded-full flex items-center justify-center text-white font-bold text-lg">
+                                ${Security.sanitizeHTML(client.name.charAt(0).toUpperCase())}
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-semibold dark:text-white">${Security.sanitizeHTML(client.name)}</h3>
+                                <p class="text-sm text-gray-500">${Security.sanitizeHTML(client.company || 'Individual')}</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-2 flex items-center"><i class="fas fa-envelope mr-2 text-indigo-500"></i>${Security.sanitizeHTML(client.email)}</p>
+                        ${client.phone ? `<p class="text-sm text-gray-500 mb-4 flex items-center"><i class="fas fa-phone mr-2 text-indigo-500"></i>${Security.sanitizeHTML(client.phone)}</p>` : ''}
+                        <div class="border-t dark:border-gray-600 pt-4 flex justify-between text-sm">
+                            <span class="text-gray-500">${clientInvoices.length} invoices</span>
+                            <span class="font-semibold gradient-text">${formatCurrency(totalBilled)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateClientSelect() {
+            const select = document.getElementById('invoiceClient');
+            select.innerHTML = '<option value="">Select a client</option>' + 
+                appData.clients.map(c => `<option value="${Security.sanitizeHTML(c.id)}">${Security.sanitizeHTML(c.name)}</option>`).join('');
+        }
+
+        // ==================== CLIENT MANAGEMENT ====================
+        function showAddClientModal() {
+            document.getElementById('clientModal').classList.remove('hidden');
+            document.getElementById('clientModal').classList.add('flex');
+        }
+
+        function closeClientModal() {
+            document.getElementById('clientModal').classList.add('hidden');
+            document.getElementById('clientModal').classList.remove('flex');
+            document.getElementById('clientName').value = '';
+            document.getElementById('clientEmail').value = '';
+            document.getElementById('clientCompany').value = '';
+            document.getElementById('clientPhone').value = '';
+        }
+
+        function addClient(e) {
+            e.preventDefault();
+            
+            const name = Security.sanitizeHTML(document.getElementById('clientName').value.trim());
+            const email = Security.sanitizeHTML(document.getElementById('clientEmail').value.trim().toLowerCase());
+            const company = Security.sanitizeHTML(document.getElementById('clientCompany').value.trim());
+            const phone = Security.sanitizeHTML(document.getElementById('clientPhone').value.trim());
+            
+            // Validation
+            if (!Security.validateEmail(email)) {
+                showToast('Please enter a valid email address', 'error');
+                return;
+            }
+            
+            // Check for duplicate email
+            if (appData.clients.some(c => c.email === email)) {
+                showToast('A client with this email already exists', 'error');
+                return;
+            }
+            
+            const client = {
+                id: Security.generateSecureId('client'),
+                name,
+                email,
+                company,
+                phone,
+                createdAt: new Date().toISOString()
+            };
+            
+            appData.clients.push(client);
+            saveData();
+            closeClientModal();
+            updateDashboard();
+            showToast('Client added successfully!', 'success');
+        }
+
+        // ==================== INVOICE MANAGEMENT ====================
+        function updateInvoiceNumber() {
+            const num = String(appData.invoices.length + 1).padStart(4, '0');
+            const number = `INV-${new Date().getFullYear()}-${num}`;
+            document.getElementById('invoiceNumber').value = number;
+            document.getElementById('previewInvoiceNum').textContent = '#' + number;
+        }
+
+        function setDefaultDueDate() {
+            const days = appData.settings.paymentTerms || 30;
+            const date = new Date();
+            date.setDate(date.getDate() + days);
+            document.getElementById('dueDate').value = date.toISOString().split('T')[0];
+        }
+
+        function addInvoiceItem() {
+            const container = document.getElementById('invoiceItems');
+            const item = document.createElement('div');
+            item.className = 'flex flex-wrap items-center gap-2 invoice-item animate-fade-in';
+            item.innerHTML = `
+                <input type="text" placeholder="Description" class="flex-1 min-w-[150px] px-3 py-2 border dark:border-gray-600 rounded-lg item-desc text-sm" maxlength="200">
+                <input type="number" placeholder="Qty" class="w-16 md:w-20 px-2 py-2 border dark:border-gray-600 rounded-lg item-qty text-sm" value="1" min="1" max="9999">
+                <input type="number" placeholder="Price" class="w-20 md:w-28 px-2 py-2 border dark:border-gray-600 rounded-lg item-price text-sm" step="0.01" min="0" max="999999.99">
+                <button type="button" onclick="this.parentElement.remove(); calculateTotal();" class="w-9 h-9 rounded-lg bg-red-100 dark:bg-red-900 text-red-500 hover:bg-red-200 dark:hover:bg-red-800 transition flex items-center justify-center flex-shrink-0"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(item);
+            setupItemListeners();
+        }
+
+        function setupItemListeners() {
+            document.querySelectorAll('.item-desc, .item-qty, .item-price').forEach(input => {
+                input.removeEventListener('input', calculateTotal);
+                input.addEventListener('input', calculateTotal);
+            });
+            document.getElementById('invoiceClient')?.addEventListener('change', updateClientPreview);
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const items = [];
+            document.querySelectorAll('.invoice-item').forEach(row => {
+                const desc = Security.sanitizeHTML(row.querySelector('.item-desc').value);
+                const qty = Math.min(9999, Math.max(0, parseFloat(row.querySelector('.item-qty').value) || 0));
+                const price = Math.min(999999.99, Math.max(0, parseFloat(row.querySelector('.item-price').value) || 0));
+                const subtotal = qty * price;
+                total += subtotal;
+                if (desc) items.push({ desc, qty, price, subtotal });
+            });
+            
+            document.getElementById('invoiceTotal').textContent = formatCurrency(total);
+            document.getElementById('previewTotal').textContent = formatCurrency(total);
+            
+            const previewItems = document.getElementById('previewItems');
+            if (items.length === 0) {
+                previewItems.innerHTML = '<p class="text-gray-400 text-center">Add items to see preview</p>';
+            } else {
+                previewItems.innerHTML = items.map(item => `
+                    <div class="flex justify-between text-sm mb-2">
+                        <span class="text-gray-600 dark:text-gray-400">${item.desc} (x${item.qty})</span>
+                        <span class="font-medium dark:text-white">${formatCurrency(item.subtotal)}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateClientPreview() {
+            const clientId = document.getElementById('invoiceClient').value;
+            const client = appData.clients.find(c => c.id === clientId);
+            if (client) {
+                document.getElementById('previewClientName').textContent = Security.sanitizeHTML(client.name);
+                document.getElementById('previewClientEmail').textContent = Security.sanitizeHTML(client.email);
+            } else {
+                document.getElementById('previewClientName').textContent = 'Select a client';
+                document.getElementById('previewClientEmail').textContent = '';
+            }
+        }
+
+        function createInvoice(e) {
+            e.preventDefault();
+            
+            const clientId = document.getElementById('invoiceClient').value;
+            if (!clientId) {
+                showToast('Please select a client', 'error');
+                return;
+            }
+            
+            const client = appData.clients.find(c => c.id === clientId);
+            if (!client) {
+                showToast('Invalid client selected', 'error');
+                return;
+            }
+            
+            const items = [];
+            let total = 0;
+            
+            document.querySelectorAll('.invoice-item').forEach(row => {
+                const desc = Security.sanitizeHTML(row.querySelector('.item-desc').value);
+                const qty = Math.min(9999, Math.max(0, parseFloat(row.querySelector('.item-qty').value) || 0));
+                const price = Math.min(999999.99, Math.max(0, parseFloat(row.querySelector('.item-price').value) || 0));
+                if (desc && qty > 0 && price > 0) {
+                    const subtotal = qty * price;
+                    total += subtotal;
+                    items.push({ desc, qty, price, subtotal });
+                }
+            });
+            
+            if (items.length === 0) {
+                showToast('Please add at least one valid item', 'error');
+                return;
+            }
+            
+            const invoice = {
+                id: Security.generateSecureId('inv'),
+                number: document.getElementById('invoiceNumber').value,
+                clientId: clientId,
+                clientName: client.name,
+                clientEmail: client.email,
+                items: items,
+                total: total,
+                notes: Security.sanitizeHTML(document.getElementById('invoiceNotes').value),
+                dueDate: document.getElementById('dueDate').value,
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            };
+            
+            appData.invoices.push(invoice);
+            saveData();
+            
+            // Reset form
+            document.querySelectorAll('.invoice-item').forEach((item, index) => {
+                if (index > 0) item.remove();
+            });
+            document.querySelector('.item-desc').value = '';
+            document.querySelector('.item-qty').value = '1';
+            document.querySelector('.item-price').value = '';
+            document.getElementById('invoiceNotes').value = '';
+            document.getElementById('invoiceClient').value = '';
+            
+            updateDashboard();
+            showDashboardTab('invoices');
+            showToast('Invoice created successfully! 🎉', 'success');
+        }
+
+        function markAsPaid(invoiceId) {
+            const invoice = appData.invoices.find(i => i.id === invoiceId);
+            if (invoice) {
+                invoice.status = 'paid';
+                invoice.paidAt = new Date().toISOString();
+                saveData();
+                updateDashboard();
+                showToast('Invoice marked as paid! 💰', 'success');
+            }
+        }
+
+        function sendReminder(invoiceId) {
+            const invoice = appData.invoices.find(i => i.id === invoiceId);
+            if (invoice) {
+                showToast(`Reminder sent to ${Security.sanitizeHTML(invoice.clientEmail)}! 📧`, 'success');
+            }
+        }
+
+        function deleteInvoice(invoiceId) {
+            if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+                appData.invoices = appData.invoices.filter(i => i.id !== invoiceId);
+                saveData();
+                updateDashboard();
+                showToast('Invoice deleted', 'success');
+            }
+        }
+
+        function searchInvoices(query) {
+            // Implement search functionality
+            const sanitizedQuery = Security.sanitizeHTML(query.toLowerCase());
+            // Filter and update table based on query
+        }
+
+        function filterInvoices(status) {
+            // Implement filter functionality
+        }
+
+        // ==================== SETTINGS ====================
+        function saveSettings(e) {
+            e.preventDefault();
+            appData.settings.business = Security.sanitizeHTML(document.getElementById('settingsBusiness').value);
+            appData.settings.address = Security.sanitizeHTML(document.getElementById('settingsAddress').value);
+            appData.settings.paymentTerms = parseInt(document.getElementById('settingsTerms').value);
+            saveData();
+            updateDashboard();
+            showToast('Settings saved! ✓', 'success');
+        }
+
+        // ==================== UTILITIES ====================
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            const styles = {
+                success: { bg: 'bg-green-500', icon: 'fa-check-circle' },
+                error: { bg: 'bg-red-500', icon: 'fa-exclamation-circle' },
+                warning: { bg: 'bg-yellow-500', icon: 'fa-exclamation-triangle' },
+                info: { bg: 'bg-blue-500', icon: 'fa-info-circle' }
+            };
+            
+            const style = styles[type] || styles.success;
+            
+            toast.className = `fixed bottom-4 right-4 px-6 py-4 rounded-xl shadow-2xl transform transition-all z-50 flex items-center max-w-sm text-white ${style.bg}`;
+            toastIcon.className = `fas ${style.icon} text-xl mr-3`;
+            toastMessage.textContent = message;
+            
+            toast.classList.remove('hidden', 'translate-y-10');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-10');
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 4000);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.add('translate-y-10');
+            setTimeout(() => toast.classList.add('hidden'), 300);
+        }
+
+        function dismissSecurityOverlay() {
+            document.getElementById('securityOverlay').classList.add('hidden');
+        }
+
+        function playDemo() {
+            showToast('Demo video coming soon!', 'info');
+        }
+
+        function handleContactForm(e) {
+            e.preventDefault();
+            showToast('Thank you! Your message has been sent. We\'ll get back to you within 24 hours.', 'success');
+            e.target.reset();
+        }
+
+        // ==================== PDF DOWNLOAD ====================
+        function downloadInvoicePDF() {
+            var invoiceNumber = document.getElementById('invoiceNumber').value || 'INV-0001';
+            var clientName = document.getElementById('previewClientName').textContent;
+            
+            // Get items
+            var items = [];
+            document.querySelectorAll('.invoice-item').forEach(function(row) {
+                var desc = row.querySelector('.item-desc').value;
+                var qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                var price = parseFloat(row.querySelector('.item-price').value) || 0;
+                if (desc && qty > 0 && price > 0) {
+                    items.push({ desc: desc, qty: qty, price: price, subtotal: qty * price });
+                }
+            });
+            
+            if (items.length === 0) {
+                showToast('Please add items to the invoice first', 'warning');
+                return;
+            }
+            
+            if (clientName === 'Select a client') {
+                showToast('Please select a client first', 'warning');
+                return;
+            }
+            
+            showToast('Generating PDF...', 'info');
+            
+            var businessName = appData.settings && appData.settings.business ? appData.settings.business : (appData.user ? appData.user.name : 'Your Business');
+            var businessEmail = appData.user ? appData.user.email : '';
+            var clientEmail = document.getElementById('previewClientEmail').textContent;
+            var dueDate = document.getElementById('dueDate').value;
+            var total = items.reduce(function(sum, item) { return sum + item.subtotal; }, 0);
+            
+            // Build items HTML
+            var itemsHTML = '';
+            for (var i = 0; i < items.length; i++) {
+                itemsHTML += '<tr>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;">' + Security.sanitizeHTML(items[i].desc) + '</td>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;text-align:center;">' + items[i].qty + '</td>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;text-align:right;">' + formatCurrency(items[i].price) + '</td>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;">' + formatCurrency(items[i].subtotal) + '</td>' +
+                '</tr>';
+            }
+            
+            // Create PDF content
+            var pdfContent = document.createElement('div');
+            pdfContent.style.cssText = 'position:absolute;left:0;top:0;width:800px;padding:40px;background:#fff;font-family:Arial,sans-serif;color:#333;';
+            pdfContent.innerHTML = 
+                '<table style="width:100%;margin-bottom:30px;">' +
+                    '<tr>' +
+                        '<td style="vertical-align:top;">' +
+                            '<div style="font-size:32px;font-weight:bold;color:#667eea;">INVOICE</div>' +
+                            '<div style="color:#666;margin-top:5px;">#' + Security.sanitizeHTML(invoiceNumber) + '</div>' +
+                        '</td>' +
+                        '<td style="text-align:right;vertical-align:top;">' +
+                            '<div style="font-weight:bold;font-size:16px;">' + Security.sanitizeHTML(businessName) + '</div>' +
+                            '<div style="color:#666;">' + Security.sanitizeHTML(businessEmail) + '</div>' +
+                        '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<table style="width:100%;margin-bottom:30px;">' +
+                    '<tr>' +
+                        '<td style="width:50%;vertical-align:top;">' +
+                            '<div style="color:#999;font-size:12px;margin-bottom:5px;">BILL TO</div>' +
+                            '<div style="font-weight:bold;">' + Security.sanitizeHTML(clientName) + '</div>' +
+                            '<div style="color:#666;">' + Security.sanitizeHTML(clientEmail) + '</div>' +
+                        '</td>' +
+                        '<td style="width:50%;text-align:right;vertical-align:top;">' +
+                            '<div style="color:#999;font-size:12px;margin-bottom:5px;">DUE DATE</div>' +
+                            '<div style="font-weight:bold;">' + formatDate(dueDate) + '</div>' +
+                        '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<table style="width:100%;border-collapse:collapse;margin-bottom:30px;">' +
+                    '<thead>' +
+                        '<tr style="background:#667eea;color:white;">' +
+                            '<th style="padding:12px;text-align:left;">Description</th>' +
+                            '<th style="padding:12px;text-align:center;width:80px;">Qty</th>' +
+                            '<th style="padding:12px;text-align:right;width:100px;">Price</th>' +
+                            '<th style="padding:12px;text-align:right;width:100px;">Amount</th>' +
+                        '</tr>' +
+                    '</thead>' +
+                    '<tbody>' + itemsHTML + '</tbody>' +
+                '</table>' +
+                '<table style="width:100%;margin-bottom:30px;">' +
+                    '<tr>' +
+                        '<td style="width:60%;"></td>' +
+                        '<td style="text-align:right;padding:8px;color:#666;">Subtotal:</td>' +
+                        '<td style="text-align:right;padding:8px;font-weight:bold;">' + formatCurrency(total) + '</td>' +
+                    '</tr>' +
+                    '<tr>' +
+                        '<td></td>' +
+                        '<td style="text-align:right;padding:8px;color:#666;">Tax:</td>' +
+                        '<td style="text-align:right;padding:8px;">$0.00</td>' +
+                    '</tr>' +
+                    '<tr style="background:#667eea;color:white;">' +
+                        '<td></td>' +
+                        '<td style="text-align:right;padding:12px;font-weight:bold;">TOTAL:</td>' +
+                        '<td style="text-align:right;padding:12px;font-weight:bold;font-size:18px;">' + formatCurrency(total) + '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;color:#999;font-size:12px;">' +
+                    '<table style="width:100%;"><tr>' +
+                        '<td>Generated by InvoiceFlow</td>' +
+                        '<td style="text-align:right;">' + formatDate(new Date().toISOString()) + '</td>' +
+                    '</tr></table>' +
+                '</div>';
+            
+            document.body.appendChild(pdfContent);
+            
+            setTimeout(function() {
+                html2pdf()
+                    .set({
+                        margin: 10,
+                        filename: invoiceNumber + '.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    })
+                    .from(pdfContent)
+                    .save()
+                    .then(function() {
+                        if (pdfContent.parentNode) {
+                            document.body.removeChild(pdfContent);
+                        }
+                        showToast('PDF downloaded successfully! 📄', 'success');
+                    })
+                    .catch(function(err) {
+                        console.error('PDF error:', err);
+                        if (pdfContent.parentNode) {
+                            document.body.removeChild(pdfContent);
+                        }
+                        showToast('PDF download failed', 'error');
+                    });
+            }, 200);
+        }
+        
+        function downloadSavedInvoicePDF(invoiceId) {
+            var invoice = appData.invoices.find(function(i) { return i.id === invoiceId; });
+            if (!invoice) {
+                showToast('Invoice not found', 'error');
+                return;
+            }
+            
+            showToast('Generating PDF...', 'info');
+            
+            var businessName = appData.settings && appData.settings.business ? appData.settings.business : (appData.user ? appData.user.name : 'Your Business');
+            var businessEmail = appData.user ? appData.user.email : '';
+            
+            // Build items HTML
+            var itemsHTML = '';
+            for (var i = 0; i < invoice.items.length; i++) {
+                var item = invoice.items[i];
+                itemsHTML += '<tr>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;">' + Security.sanitizeHTML(item.desc) + '</td>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;text-align:center;">' + item.qty + '</td>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;text-align:right;">' + formatCurrency(item.price) + '</td>' +
+                    '<td style="padding:10px;border-bottom:1px solid #eee;text-align:right;font-weight:bold;">' + formatCurrency(item.subtotal) + '</td>' +
+                '</tr>';
+            }
+            
+            var statusColor = invoice.status === 'paid' ? '#22c55e' : (invoice.status === 'overdue' ? '#ef4444' : '#f59e0b');
+            
+            // Create PDF content
+            var pdfContent = document.createElement('div');
+            pdfContent.style.cssText = 'position:absolute;left:0;top:0;width:800px;padding:40px;background:#fff;font-family:Arial,sans-serif;color:#333;';
+            pdfContent.innerHTML = 
+                '<table style="width:100%;margin-bottom:30px;">' +
+                    '<tr>' +
+                        '<td style="vertical-align:top;">' +
+                            '<div style="font-size:32px;font-weight:bold;color:#667eea;">INVOICE</div>' +
+                            '<div style="color:#666;margin-top:5px;">#' + Security.sanitizeHTML(invoice.number) + '</div>' +
+                        '</td>' +
+                        '<td style="text-align:right;vertical-align:top;">' +
+                            '<div style="display:inline-block;padding:8px 16px;background:' + statusColor + ';color:white;border-radius:20px;font-weight:bold;font-size:14px;">' + invoice.status.toUpperCase() + '</div>' +
+                        '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<table style="width:100%;margin-bottom:20px;">' +
+                    '<tr>' +
+                        '<td style="vertical-align:top;">' +
+                            '<div style="font-weight:bold;font-size:16px;">' + Security.sanitizeHTML(businessName) + '</div>' +
+                            '<div style="color:#666;">' + Security.sanitizeHTML(businessEmail) + '</div>' +
+                        '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<table style="width:100%;margin-bottom:30px;">' +
+                    '<tr>' +
+                        '<td style="width:50%;vertical-align:top;">' +
+                            '<div style="color:#999;font-size:12px;margin-bottom:5px;">BILL TO</div>' +
+                            '<div style="font-weight:bold;">' + Security.sanitizeHTML(invoice.clientName) + '</div>' +
+                            '<div style="color:#666;">' + Security.sanitizeHTML(invoice.clientEmail) + '</div>' +
+                        '</td>' +
+                        '<td style="width:50%;text-align:right;vertical-align:top;">' +
+                            '<div style="color:#999;font-size:12px;margin-bottom:5px;">DUE DATE</div>' +
+                            '<div style="font-weight:bold;">' + formatDate(invoice.dueDate) + '</div>' +
+                        '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<table style="width:100%;border-collapse:collapse;margin-bottom:30px;">' +
+                    '<thead>' +
+                        '<tr style="background:#667eea;color:white;">' +
+                            '<th style="padding:12px;text-align:left;">Description</th>' +
+                            '<th style="padding:12px;text-align:center;width:80px;">Qty</th>' +
+                            '<th style="padding:12px;text-align:right;width:100px;">Price</th>' +
+                            '<th style="padding:12px;text-align:right;width:100px;">Amount</th>' +
+                        '</tr>' +
+                    '</thead>' +
+                    '<tbody>' + itemsHTML + '</tbody>' +
+                '</table>' +
+                '<table style="width:100%;margin-bottom:30px;">' +
+                    '<tr>' +
+                        '<td style="width:60%;"></td>' +
+                        '<td style="text-align:right;padding:8px;color:#666;">Subtotal:</td>' +
+                        '<td style="text-align:right;padding:8px;font-weight:bold;">' + formatCurrency(invoice.total) + '</td>' +
+                    '</tr>' +
+                    '<tr>' +
+                        '<td></td>' +
+                        '<td style="text-align:right;padding:8px;color:#666;">Tax:</td>' +
+                        '<td style="text-align:right;padding:8px;">$0.00</td>' +
+                    '</tr>' +
+                    '<tr style="background:#667eea;color:white;">' +
+                        '<td></td>' +
+                        '<td style="text-align:right;padding:12px;font-weight:bold;">TOTAL:</td>' +
+                        '<td style="text-align:right;padding:12px;font-weight:bold;font-size:18px;">' + formatCurrency(invoice.total) + '</td>' +
+                    '</tr>' +
+                '</table>' +
+                '<div style="margin-top:40px;padding-top:20px;border-top:1px solid #eee;color:#999;font-size:12px;">' +
+                    '<table style="width:100%;"><tr>' +
+                        '<td>Generated by InvoiceFlow</td>' +
+                        '<td style="text-align:right;">' + formatDate(new Date().toISOString()) + '</td>' +
+                    '</tr></table>' +
+                '</div>';
+            
+            document.body.appendChild(pdfContent);
+            
+            setTimeout(function() {
+                html2pdf()
+                    .set({
+                        margin: 10,
+                        filename: invoice.number + '.pdf',
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true, logging: false },
+                        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                    })
+                    .from(pdfContent)
+                    .save()
+                    .then(function() {
+                        if (pdfContent.parentNode) {
+                            document.body.removeChild(pdfContent);
+                        }
+                        showToast('PDF downloaded successfully! 📄', 'success');
+                    })
+                    .catch(function(err) {
+                        console.error('PDF error:', err);
+                        if (pdfContent.parentNode) {
+                            document.body.removeChild(pdfContent);
+                        }
+                        showToast('PDF download failed', 'error');
+                    });
+            }, 200);
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    <title>InvoiceFlow - Smart Invoice Generator & Payment Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --primary: #667eea;
+            --primary-dark: #5a67d8;
+            --secondary: #764ba2;
+            --bg-light: #f7fafc;
+            --bg-dark: #0f172a;
+            --card-dark: #1e293b;
+            --text-dark: #e2e8f0;
+        }
+        
+        * { font-family: 'Inter', sans-serif; }
+        
+        .dark { background-color: var(--bg-dark); color: var(--text-dark); }
+        .dark .bg-white { background-color: var(--card-dark) !important; }
+        .dark .bg-gray-50, .dark .bg-gray-100 { background-color: var(--bg-dark) !important; }
+        .dark .text-gray-800, .dark .text-gray-700 { color: var(--text-dark) !important; }
+        .dark .text-gray-600, .dark .text-gray-500 { color: #94a3b8 !important; }
+        .dark .border { border-color: #334155 !important; }
+        .dark input, .dark select, .dark textarea { background-color: #334155 !important; border-color: #475569 !important; color: white !important; }
+        
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        
+        .animate-float { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        .animate-slide-up { animation: slideUp 0.5s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+        
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; width: 20px; height: 20px; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-50 transition-colors duration-300">
+    <!-- This is the production frontend that connects to the backend API -->
+    <!-- See the full index.html in the project root for the complete UI -->
+    
+    <div id="app" class="min-h-screen flex items-center justify-center">
+        <div class="text-center p-8">
+            <div class="w-20 h-20 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-6 animate-float">
+                <i class="fas fa-file-invoice-dollar text-3xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-bold gradient-text mb-4">InvoiceFlow</h1>
+            <p class="text-gray-600 mb-8">Loading your invoice management dashboard...</p>
+            <div class="spinner mx-auto" style="border-color: #667eea; border-top-color: #764ba2;"></div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE_URL = window.location.origin + '/api';
+        
+        // Auth token storage
+        let authToken = localStorage.getItem('authToken');
+        
+        // API Helper
+        const api = {
+            async request(endpoint, options = {}) {
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+                    ...options.headers
+                };
+                
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    ...options,
+                    headers
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'API request failed');
+                }
+                
+                return data;
+            },
+            
+            get(endpoint) {
+                return this.request(endpoint);
+            },
+            
+            post(endpoint, body) {
+                return this.request(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+            },
+            
+            put(endpoint, body) {
+                return this.request(endpoint, {
+                    method: 'PUT',
+                    body: JSON.stringify(body)
+                });
+            },
+            
+            delete(endpoint) {
+                return this.request(endpoint, { method: 'DELETE' });
+            }
+        };
+        
+        // Check API health and redirect
+        async function init() {
+            try {
+                const health = await api.get('/health');
+                console.log('API Status:', health);
+                
+                if (authToken) {
+                    // Verify token is still valid
+                    try {
+                        await api.get('/auth/me');
+                        // Token valid, load dashboard
+                        window.location.href = '/dashboard';
+                    } catch {
+                        // Token invalid, clear and show login
+                        localStorage.removeItem('authToken');
+                        authToken = null;
+                    }
+                }
+                
+                // Show landing page
+                document.getElementById('app').innerHTML = `
+                    <div class="text-center p-8">
+                        <div class="w-20 h-20 gradient-bg rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-file-invoice-dollar text-3xl text-white"></i>
+                        </div>
+                        <h1 class="text-3xl font-bold gradient-text mb-4">InvoiceFlow</h1>
+                        <p class="text-gray-600 mb-8">API Connected Successfully!</p>
+                        <p class="text-sm text-gray-500">Server: ${health.version} | ${health.environment}</p>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('app').innerHTML = `
+                    <div class="text-center p-8">
+                        <div class="w-20 h-20 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <i class="fas fa-exclamation-triangle text-3xl text-red-500"></i>
+                        </div>
+                        <h1 class="text-2xl font-bold text-gray-800 mb-4">Connection Error</h1>
+                        <p class="text-gray-600 mb-4">Could not connect to the API server.</p>
+                        <p class="text-sm text-red-500">${error.message}</p>
+                        <button onclick="location.reload()" class="mt-6 px-6 py-3 gradient-bg text-white rounded-lg">
+                            <i class="fas fa-redo mr-2"></i> Retry
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        init();
+    </script>
+</body>
+</html>
